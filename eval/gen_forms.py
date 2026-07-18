@@ -18,6 +18,7 @@ import os
 import random
 
 import fitz  # pymupdf
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -144,6 +145,23 @@ def open_page(pdf_name, page_idx):
     return doc, doc[page_idx]
 
 
+def crop_bottom_whitespace(img, near_white=245, pad=24):
+    """Trim the blank PDF-page tail below the last row of visible content.
+
+    IRS form pages are Letter-sized but the fillable form occupies only the top
+    ~47% of the page; the blank bottom half wastes the vision encoder's fixed
+    downscale budget and renders the field text illegible. We crop ONLY the
+    bottom margin -- the top-left origin is preserved so a point at
+    (x_pt * ZOOM, y_pt * ZOOM) still maps to the same pixel after cropping.
+    """
+    arr = np.asarray(img)
+    nonblank_rows = np.nonzero(np.any(arr < near_white, axis=(1, 2)))[0]
+    if len(nonblank_rows) == 0:
+        return img
+    bottom = min(img.height, int(nonblank_rows.max()) + 1 + pad)
+    return img.crop((0, 0, img.width, bottom))
+
+
 def render(doc, page, draws, out_path):
     """draws: list of (x_pt, y_pt, text, size, bold) in PDF-point space."""
     pix = page.get_pixmap(dpi=DPI, colorspace=fitz.csRGB, alpha=False)
@@ -151,6 +169,7 @@ def render(doc, page, draws, out_path):
     d = ImageDraw.Draw(img)
     for x_pt, y_pt, text, size, bold in draws:
         d.text((x_pt * ZOOM, y_pt * ZOOM), text, font=font(size, bold), fill=INK)
+    img = crop_bottom_whitespace(img)
     img.save(out_path)
     doc.close()
 
@@ -172,7 +191,10 @@ def gen_w2(n):
     medicare_wh = round(ss_wages * 0.0145, 2)
 
     draws = [
-        (45, 50, ssn, 15, False),
+        # Box a "Employee's social security number" -- value sits just below its
+        # printed label (label bbox x[157,248] y[37,45]), NOT next to the 22222
+        # control number in the top-left corner.
+        (165, 49, ssn, 14, False),
         (45, 74, f"EIN {ein}", 13, False),
         (45, 99, employer, 15, False),
         (45, 120, emp_addr1, 13, False),
