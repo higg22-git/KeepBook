@@ -1320,7 +1320,7 @@
         var sub = "Received" + (m.date ? " " + m.date : "") + (m.corr ? " · " + m.corr + " correction" + (m.corr > 1 ? "s" : "") : "");
         return '<div class="check-row done' + (animate ? " row-settle" : "") + '">' +
           '<span class="check-box done">' + (animate ? checkSvgAnimated() : CHECK_SVG) + '</span>' +
-          '<div class="grow"><div class="c-label">' + esc(t) + '</div><div class="c-sub">' + esc(sub) + '</div></div></div>';
+          '<div class="grow"><div class="c-label">' + esc(t) + (animate ? '<span class="new-dot" title="just confirmed"></span>' : '') + '</div><div class="c-sub">' + esc(sub) + '</div></div></div>';
       }
       if (inReview[t]) {
         return '<div class="check-row pending"><span class="check-box"></span>' +

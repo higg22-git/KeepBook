@@ -137,7 +137,7 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
 - [x] **T44 — FREEZE at 1:00 PM** (all)
   DoD: no feature code after 1:00 PM; only demo prep, writeup, and fixes for demo-blocking bugs.
   CORRECTION (orchestrator ~11:40): an earlier check-off was premature (orchestrator clock ran fast; founder corrected). Re-checked now on the founder's explicit declaration (~12:50): "Any code we update now should be emergency fixes instead of additional features."
-  Evidence: frozen with suite 88 green, zero console errors, big seed loaded, all lanes merged and evidence-gated (final feature additions: un-confirm/re-open, client edit/guarded delete, review zoom + wide canvas, masonry dashboard, logo-click home, measured-value tooltips, CSV import, strikethrough checklist). CARVE-OUT recorded: the parallel session's Courier panscan experiment continues — it is writeup-evidence work on a Courier-gated path that never executes in the shipped demo (MODEL_RUNTIME=ollama); it commits its own files and touches nothing demo-shipped.
+  Evidence: frozen with suite 88 green, zero console errors, big seed loaded, all lanes merged and evidence-gated (final feature additions: un-confirm/re-open, client edit/guarded delete, review zoom + wide canvas, masonry dashboard, logo-click home, measured-value tooltips, CSV import, strikethrough checklist). SECOND CARVE-OUT (~2:28 PM): founder explicitly overrode the freeze for T72 (new-entry dot) — operator held the line once, founder said "push it through for demo sake"; shipped as the smallest possible additive change and E2E-verified before the demo tab was touched. FIRST CARVE-OUT recorded: the parallel session's Courier panscan experiment continues — it is writeup-evidence work on a Courier-gated path that never executes in the shipped demo (MODEL_RUNTIME=ollama); it commits its own files and touches nothing demo-shipped.
 
 ## Phase 5 — Demo + submission (hard deadlines)
 
@@ -213,10 +213,10 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: point the var at a temp dir → all four artifacts land there; restart → state loads from it.
   Evidence: _none_
 
-- [ ] **T72 — "New since last visit" indicator on client cards** (agent; POST-DEMO backlog — founder ask, Sat ~2:20 PM, deliberately held at the freeze line)
+- [x] **T72 — "New since last visit" indicator on client cards** (agent; founder OVERRODE the freeze hold ~2:28 PM — "let's push it through for demo sake")
   DoD: newly-confirmed checklist entries carry a persistent "new" dot/badge on the dashboard until the user first views the dashboard after the confirm (not just the one-shot ink animation, which already ships and covers the live-demo moment); cleared per-view-visit, client-side state is fine.
   Verify: confirm a doc while on Review → switch to Dashboard → dot present on that entry; switch away and back → dot gone.
-  Evidence: _none_
+  Evidence: minimal additive change — one line in app.js (dot span rides the existing `state.justConfirmed` one-shot, consumed at dashboard render) + one CSS block (`.new-dot`, ink-blue pulse ×3 then solid). `node --check` clean; backend untouched (88-test suite unaffected). Live E2E on :8100 at ~2:33 PM: real intake doc_128 (1099-INT, e4b read 3/3) → UI confirm for Marcus Whitfield → first Dashboard visit shows the dot on exactly the new 1099-INT row (screenshot in transcript, Marcus 2/2 "all in ✓") → navigate away and back → `document.querySelectorAll('.new-dot').length === 0`. Dot persists across multiple confirms until the next dashboard visit consumes them (justConfirmed semantics).
 
 - [ ] **T70 — Watched intake folder** (agent; POST-DEMO backlog — added Sat ~11:55)
   DoD: a designated ~/KeepBook Inbox/ folder watched by the backend (watchdog/fswatch); any image dropped there auto-ingests exactly like a drag-drop (same pipeline, same review gate). The on-device-native intake path: AirDrop from the phone lands a file, KeepBook eats it, no browser interaction. Risk note: needs dedup with the uploads dir + ignore non-images + never delete originals.
