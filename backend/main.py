@@ -279,7 +279,10 @@ async def intake(request: Request):
             _persist_locked()
     else:
         form = await request.form()
-        uploads = [v for v in form.values() if isinstance(v, StarletteUploadFile)]
+        # multi_items() keeps EVERY (key, value) pair — the built frontend sends
+        # each file under a repeated "file" key (frontend/js/api.js), and
+        # form.values() would collapse them to one. Key-agnostic by design.
+        uploads = [v for _, v in form.multi_items() if isinstance(v, StarletteUploadFile)]
         if not uploads:
             raise HTTPException(400, "no files in multipart body")
         with STATE_LOCK:
