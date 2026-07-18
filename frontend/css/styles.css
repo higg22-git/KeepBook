@@ -85,6 +85,7 @@ a:hover { color: var(--ink-blue-dk); }
   color: var(--muted);
   background: none; border: none; cursor: pointer;
   padding: 8px 14px; border-radius: 8px;
+  transition: background .15s, color .15s;
 }
 .nav button:hover { background: #00000008; color: var(--ink); }
 .nav button.active { color: var(--ink-blue); background: #2f5fd014; }
@@ -181,6 +182,7 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
   padding: 11px 24px; border: none; border-radius: 8px;
   background: var(--ink-blue); color: var(--card); cursor: pointer;
   box-shadow: var(--shadow-soft);
+  transition: background .15s;
 }
 .btn:hover { background: var(--ink-blue-dk); }
 .btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
