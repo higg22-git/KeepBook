@@ -692,8 +692,13 @@
       var grid = $("client-grid");
       grid.innerHTML = clients.map(function (c) { return clientCardHtml(c, docs); }).join("");
 
-      grid.querySelectorAll("[data-req]").forEach(function (b) {
-        b.onclick = function () { toast("Chase email drafted for " + b.dataset.req); };
+      grid.querySelectorAll("[data-req-client]").forEach(function (b) {
+        b.onclick = function () {
+          var c = clients.filter(function (x) { return x.id === b.dataset.reqClient; })[0];
+          if (!c) return;
+          window.location.href = chaseMailtoHref(c);
+          toast("Draft opened in your mail app");
+        };
       });
       // Quiet "+ New client" affordance at the end of the grid (ghost card that
       // expands into an inline create form).
@@ -822,6 +827,30 @@
     });
   }
 
+  // Build a real mailto: draft chasing a client's still-missing documents.
+  // Frontend-only (works offline, same in mock mode). Every interpolated value
+  // is URL-encoded; body newlines are CRLF (%0D%0A after encoding). No claims
+  // are fabricated — the body lists exactly the expected-minus-received items.
+  function chaseMailtoHref(c) {
+    var received = {};
+    (c.received_docs || []).forEach(function (t) { received[t] = true; });
+    var missing = (c.expected_docs || []).filter(function (t) { return !received[t]; });
+    var subject = "Missing tax documents — " + c.name;
+    var lines = [
+      "Hi " + c.name + ",",
+      "",
+      "As we prepare your 2025 return, we're still missing the following documents:",
+      ""
+    ];
+    missing.forEach(function (t) { lines.push("- " + t); });
+    lines.push("");
+    lines.push("Could you send these over when you have a moment? Reply to this email or upload them at your convenience.");
+    lines.push("");
+    lines.push("Thank you.");
+    var body = lines.join("\r\n");
+    return "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+
   function clientCardHtml(c, docs) {
     var received = {};
     (c.received_docs || []).forEach(function (t) { received[t] = true; });
@@ -863,7 +892,7 @@
         '<div class="grow"><div class="c-label">' + esc(t) + '</div>' +
         '<div class="c-sub">Not received yet</div></div>' +
         '<span class="missing-flag">MISSING</span>' +
-        '<button class="request-link" data-req="' + esc(c.name) + '" style="margin-left:12px">Request</button></div>';
+        '<button class="request-link" data-req-client="' + esc(c.id) + '" style="margin-left:12px">Request</button></div>';
     }).join("");
 
     var badge = complete
