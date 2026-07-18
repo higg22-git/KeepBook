@@ -1,0 +1,39 @@
+{
+  "hours": 24,
+  "buckets": [
+    {"hour": "16:00", "docs": 5, "corrections": 0},
+    {"hour": "17:00", "docs": 4, "corrections": 2},
+    {"hour": "18:00", "docs": 2, "corrections": 1},
+    {"hour": "19:00", "docs": 1, "corrections": 0},
+    {"hour": "20:00", "docs": 0, "corrections": 0},
+    {"hour": "21:00", "docs": 1, "corrections": 0},
+    {"hour": "22:00", "docs": 0, "corrections": 0},
+    {"hour": "23:00", "docs": 0, "corrections": 0},
+    {"hour": "00:00", "docs": 0, "corrections": 0},
+    {"hour": "01:00", "docs": 0, "corrections": 0},
+    {"hour": "02:00", "docs": 0, "corrections": 0},
+    {"hour": "03:00", "docs": 0, "corrections": 0},
+    {"hour": "04:00", "docs": 0, "corrections": 0},
+    {"hour": "05:00", "docs": 0, "corrections": 0},
+    {"hour": "06:00", "docs": 0, "corrections": 0},
+    {"hour": "07:00", "docs": 3, "corrections": 0},
+    {"hour": "08:00", "docs": 6, "corrections": 3},
+    {"hour": "09:00", "docs": 4, "corrections": 2},
+    {"hour": "10:00", "docs": 2, "corrections": 1},
+    {"hour": "11:00", "docs": 1, "corrections": 0},
+    {"hour": "12:00", "docs": 2, "corrections": 0},
+    {"hour": "13:00", "docs": 0, "corrections": 0},
+    {"hour": "14:00", "docs": 0, "corrections": 0},
+    {"hour": "15:00", "docs": 0, "corrections": 0}
+  ],
+  "totals": {
+    "docs_processed": 31,
+    "fields_extracted": 214,
+    "fields_corrected": 9,
+    "correction_rate": 0.042,
+    "first_try_type_acc": 0.94,
+    "median_latency_s": 19.2,
+    "fields_low_confidence": 17,
+    "corrections_by_category": {"money": 4, "tin_ssn": 2, "names": 2, "doc_type": 1}
+  }
+}

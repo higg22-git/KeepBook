@@ -32,37 +32,43 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
 
 ## Phase 1 — Backend core (owner V/agent; target ~11:00 AM)
 
-- [ ] **T10 — `backend/model_runtime.py` adapter** (V/agent)
+- [x] **T10 — `backend/model_runtime.py` adapter** (V/agent)
   DoD: `extract(image_b64, prompt) -> str` implementing both shapes in docs/API.md, runtime/env-var selected; no other backend file contains a model URL.
   Verify: `MODEL_RUNTIME=ollama python -c "..."` returns non-empty model output for `eval/w2_test.png`; `grep -rn "11434\|api/generate\|chat/completions" backend/ --include="*.py" | grep -v model_runtime.py` returns nothing.
-  Evidence: _none_
+  Evidence: `MODEL_RUNTIME=ollama .venv/bin/python -c "model_runtime.extract(w2_test)"` → JSON `{"doc_type":"W-2","employee_name":"Marcus D. Whitfield","box2_fed_withheld":"9,183.44"}`. Scoped grep `grep -rnE "11434|api/generate|chat/completions|COURIER_BASE_URL" backend/ --include=*.py --exclude-dir=.venv | grep -v model_runtime.py` → CLEAN (only backend source is model_runtime/pipeline/main; venv is gitignored, ignore its lib hits). Commit `be0662d`.
 
-- [ ] **T11 — FastAPI endpoints per docs/API.md** (V/agent)
+- [x] **T11 — FastAPI endpoints per docs/API.md** (V/agent)
   DoD: `/intake`, `/queue`, `/documents`, `/documents/{id}`, `/documents/{id}/image`, `/documents/{id}/confirm`, `/clients`, `/stats` all return contract-shaped JSON; `state.json` persisted on every mutation.
   Verify: curl sequence — POST a testset image to `/intake` → doc reaches `status: extracted` in `/documents` → POST `/confirm` with one changed field → doc `confirmed`, field carries `corrected: true` + `original_value`, client checklist updates; kill and restart server → state intact.
-  Evidence: _none_
+  Evidence: uvicorn :8100 — `POST /intake -F file=@eval/w2_test.png` → `{"queued":["doc_001"]}`; polled `/queue` to `done:1`; `/documents/doc_001` → `status:"extracted"` all 5 W-2 fields (box2 `9,183.44`), `received_at` set; `POST /documents/doc_001/confirm` with box2→`"8,000.00"` → `box2_fed_withheld:{"value":"8,000.00","corrected":true,"original_value":"9,183.44"}`, `status:"confirmed"`, `/clients` → `received_docs:["W-2"]`; `pkill uvicorn` then restart → `/documents/doc_001` still `confirmed` with correction + client intact, `/queue` `done:1`. `/image` → `http=200 image/png`. Commit `be0662d`.
 
-- [ ] **T12 — Classification + extraction prompts** (V/agent)
+- [x] **T12 — Classification + extraction prompts** (V/agent)
   DoD: strict-JSON prompts at temperature 0; unparseable JSON → one retry → `UNRECOGNIZED`; per-type field keys match docs/API.md.
   Verify: `w2_clean_01.png` through the real pipeline → `doc_type: "W-2"` with all five W-2 field keys present.
-  Evidence: _none_
+  Evidence: intake `w2_clean_01.png` → `status:"extracted"`, `doc_type:"W-2"`, field keys `['employee_name','ssn','employer','box1_wages','box2_fed_withheld']` (all five). NOTE: field VALUES came back empty on this image — the known testset generator illegibility bug, NOT a prompt bug (same pipeline on `eval/w2_test.png` returns 6/6 correct incl. box2 `9,183.44`); DoD is type + keys, both correct. Empty values are honestly flagged `low_confidence`. Commit `be0662d`.
 
-- [ ] **T13 — UNRECOGNIZED path** (V/agent)
+- [x] **T13 — UNRECOGNIZED path** (V/agent)
   DoD: non-tax documents are never force-fit; they land in review queue for manual classification, and manual classify → normal confirm flow.
   Verify: `receipt_01.png` through the pipeline → `status: unrecognized`; then POST `/confirm` with a manual `doc_type` + `client_id` succeeds.
-  Evidence: _none_
+  Evidence: intake `receipt_01.png` → `status:"unrecognized"`, `doc_type:"UNRECOGNIZED"`, `fields:{}` (not force-fit); then `POST /confirm {"client_id":"client_whitfield_m","doc_type":"1099-MISC","fields":{"payer":"Acme Corp"}}` → `status:"confirmed"`, `doc_type:"1099-MISC"`, `/clients received_docs` gained `1099-MISC`. Commit `be0662d`.
+
+- [x] **T14 — Event log + /stats/timeline (STRETCH — only after T10-T13 green)** (V/agent)
+  DoD: backend appends extraction/confirm events to `backend/events.jsonl` per docs/API.md "Event log"; `GET /stats/timeline?hours=24` aggregates buckets + totals incl. corrections_by_category and first_try_type_acc.
+  Verify: process 2 docs, correct 1 field, confirm both → timeline totals show 2 docs, correct correction count, category attribution matches the corrected key.
+  Evidence: T10-T13 green first. `events.jsonl` carries `extracted`/`unrecognized`/`confirmed` rows in contract shape (incl. `fields_low_confidence` per `acbe402`). Ran 3 docs / 2 confirms / 1 field correction → `GET /stats/timeline?hours=24` totals: `docs_processed:3, fields_extracted:10, fields_low_confidence:5, fields_corrected:2, correction_rate:0.2, first_try_type_acc:0.5, median_latency_s:15.73, corrections_by_category:{"money":1,"names":1,"doc_type":1}` — attribution matches corrected keys (box2_fed_withheld→money, payer→names, receipt→1099-MISC type change→doc_type). Separately: w2_clean_01 (empty fields) → `fields_low_confidence:5` in its extracted event; w2_test (valid) → `0`. Commits `be0662d` + `966ba5f`.
+  ADDENDUM (contract fix + observability): live E2E found two timeline contract violations, pinned red by `backend/tests/test_timeline_contract.py` (`04d0c52`) — sparse buckets and zero-count categories omitted. Fixed: exactly `hours` zero-filled buckets oldest-first ending current hour; `corrections_by_category` always carries all four keys. Both tests green (`pytest backend/tests/test_timeline_contract.py` → 2 passed), plus `test_api_contract.py` 4 passed and `eval/test_scoring.py` 8 passed, verified in a clean worktree at `04d0c52` + this change (the shared tree's in-flight re-ask/cascade `pipeline.py` edits break the api suite's fake-adapter signature — that lane's to reconcile). Bundled: per-doc raw model I/O capture → `backend/raws/{doc_id}.json` (gitignored) referenced as `raw_ref` in the extracted event, and `p95_latency_s` in timeline totals; real-model check: w2_test → raws file with 2 calls (exact classify+extract prompts + raw responses), event `raw_ref:"raws/doc_001.json"`, timeline `buckets=24` zero-filled, `p95_latency_s:32.0`, categories all present.
 
 ## Phase 2 — Eval (owner V/agent; target ~12:30 PM)
 
-- [ ] **T20 — `eval/run_eval.py` per docs/EVAL.md** (V/agent)
+- [x] **T20 — `eval/run_eval.py` per docs/EVAL.md** (V/agent)
   DoD: imports the backend adapter + production prompts (not copies); implements the scoring rules (money normalization, casefold strings, silent-wrong-value counter); emits summary + `eval/results.json`.
   Verify: run against any 3 testset images with labels; hand-check one scored field against labels.json.
-  Evidence: _none_
+  Evidence: `run_eval.py --model gemma4:e4b --labels labels.json --docs ./testset/ --images w2_clean_01.png,1099int_clean_01.png,receipt_01.png` → completed, `doc-type accuracy: 3/3 (100.0%)`, `field accuracy: 0/8 (0.0%)`, `silent wrong values: 0`, `median latency: 13.1s`, wrote results.json. `run_eval.py` imports `backend/pipeline.run_pipeline` (not a copy). Hand-check: w2_clean_01 `box1_wages` expected `"101775.13"` (== labels.json) vs predicted `""` → verdict `missing` (empty counts as miss, not silent-wrong — correct). Field 0/8 is the known testset illegibility bug, not a scorer bug. Commit `a7cb7d2`. (Full 26-doc runs = T21/T22, left for orchestrator.)
 
-- [ ] **T21 — Full e4b run over the 26-doc test set** (V/agent)
+- [x] **T21 — Full e4b run over the 26-doc test set** (V/agent)
   DoD: `eval/results.json` committed with doc-type accuracy, field accuracy, silent-wrong count, median latency.
   Verify: `python run_eval.py --model gemma4:e4b ...` completes all 26; results.json parses; numbers transcribed nowhere they don't match.
-  Evidence: _none_
+  Evidence: `backend/.venv/bin/python eval/run_eval.py --model gemma4:e4b --labels eval/labels.json --docs eval/testset/` on the FIXED testset (commit `e376cc8` content-crop + W-2 SSN placement, regenerated in `39b1aa8`) → all 26 scored, `doc-type accuracy: 26/26 (100%)`, `field accuracy: 41/94 (43.6%)`, `silent wrong values: 23`, `median latency: 17.23s`. results.json parses (json.load, `docs_scored: 26`). Split: clean 29/47 fields, photo 12/47. Misses are genuine vision errors (e.g. `Coppell Bank` for `Copperline Bank`), not the pre-fix all-empty artifact. Commit `30a66b7`.
 
 - [ ] **T22 — e2b comparison run** (V/agent)
   DoD: same set through `gemma4:e2b`; comparison table committed (extends the kill test from n=1 to n=26).
@@ -79,17 +85,24 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
 - [ ] **T30 — Capture/Submit screen** (V)
   DoD: drag-and-drop posts files to `/intake`; queue progress polls `/queue`; paper/ink tokens per docs/design/DESIGN.md; "Processed on this Mac. Nothing is uploaded." visible.
   Verify: drop 2 testset images in a browser → both appear in `/documents` and progress shows.
-  Evidence: _none_
+  Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — dropped 2 files onto the zone → "Queued · 2 files" list → Process → `/queue` polling rendered "0 of 2" with progress bar → "2 documents ready", and both materialized into Review (doc_007 `1099-INT`, doc_008 `UNRECOGNIZED`, each with preview image). Paper/ink tokens + "Processed on this Mac. Nothing is uploaded." present; page load fires ZERO external network requests (all `localhost` + `blob:`, Caveat font from local `assets/caveat.woff2`). Awaiting backend for full DoD (real `/intake` round-trip). LIVE-STACK ADDENDUM (orchestrator ~01:40): real /intake verified via curl multipart (2 files, repeated `file` key) → processed → rendered in Review with images; box stays unchecked only because the literal browser drag-and-drop gesture on the real stack hasn't been performed — covered by T40's morning Wi-Fi-off run.
 
-- [ ] **T31 — Bin Review & Correction screen** (V)
+- [x] **T31 — Bin Review & Correction screen** (V)
   DoD: source image beside extracted fields; editing a field and confirming POSTs `/confirm`; corrected value renders red-strike original + ink-blue correction; survives reload.
   Verify: correct one field in the browser → reload → correction still displayed; `/stats` correction count incremented.
-  Evidence: _none_
+  Evidence (full DoD, live stack, orchestrator ~01:45): real browser against running backend on :8100 — selected Ruth Okafor, edited box2_fed_withheld on doc_001 (real e4b extraction of w2_test.png), Confirm → GET /documents/doc_001 showed `{"value":"9,999.99","corrected":true,"original_value":"9,183.44"}`, status confirmed; /stats went to fields_corrected:1, correction_rate:0.2; state persisted server-side (state.json). Mock-mode render spec evidence below stands.
+  Prior evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — source image renders beside editable fields; corrected Marcus Whitfield W-2 Box 2 `70,110.00`→`9,183.44` in the browser, rendered original struck in red pen (computed `rgb(192,57,43)` + `line-through`) beside corrected value in ink blue (`rgb(47,95,208)`, weight 700) with a Caveat "corrected" note; the correction persists across reload (localStorage in mock; real backend `state.json` for full DoD) and `/stats` corrected-count went 1→2. UNRECOGNIZED receipt shows the manual `doc_type` + client pickers, empty confirm is blocked ("Pick a document type first"), and classifying it as K-1 for Chen flowed to the checklist. Awaiting backend for full DoD (real `/confirm` + server-side reload persistence).
 
-- [ ] **T32 — Checklist Dashboard** (V)
+- [x] **T32 — Checklist Dashboard** (V)
   DoD: clients from `/clients`; confirming a doc checks its checklist item with the ink animation; missing items obvious; stats line shows fields extracted / corrected.
   Verify: confirm a W-2 for a client expecting one → item inks in; client missing a K-1 shows it missing.
-  Evidence: _none_
+  Evidence (full DoD, live stack, orchestrator ~01:50): real browser, live /clients — confirmed W-2 for Ruth Okafor (expected [W-2]) → row inked "all in ✓" with "Received Jul 18 · 1 correction"; Chen Partnership showed K-1 + 1098 MISSING in highlighter; Marcus Whitfield showed W-2 + 1099-INT MISSING; stats line rendered live 5 extracted / 1 corrected / 20.0%. Screenshot in transcript.
+  Prior evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — three journey clients render with correct gaps: Ruth Okafor 2/3 then 3/3 ("all in ✓") after confirming her 1099-INT, with the ink-in animation classes (`row-settle` + `ink-draw` check path) applied to ONLY the newly-confirmed row; Marcus Whitfield shows 1099-INT MISSING in highlighter (#ffd24a) with a Request link; Chen Partnership shows K-1 + 1098 MISSING. Stats line renders from `/stats` (fields extracted / corrected / correction rate, e.g. 26 / 2 / 7.7%). Awaiting backend for full DoD (live `/clients` + `/stats`).
+
+- [ ] **T33 — "Stats for Nerds" screen (STRETCH — only after T30-T32 green)** (V/agent)
+  DoD: fourth view rendering `GET /stats/timeline?hours=24` per mockup screen 3 (docs/design/tax-intake-mockup.html): headline tiles (docs processed, first-try classification %, correction rate, median latency), docs-per-hour bars, corrections-by-category list, the "Past 24 hours only... Nothing leaves this Mac" line, "the red-pen rate is the number to watch" tagline.
+  Verify: with seeded events, all tiles render real numbers; mock mode works without backend.
+  Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — fourth "Nerd stats" view renders `mock/timeline.json` (exact `GET /stats/timeline?hours=24` shape): tiles 31 docs / 94% first-try / 4.2% correction rate / 19.2s median; 24 CSS bars (last 3 ink-blue, "now ←" + axis labels); extraction block 214 / 17 · 7.9% flagged (highlighter) / corrected in red; corrections-by-category 4/2/2/1; both required lines present ("Past 24 hours only — stats reset as they age out. Nothing leaves this Mac." + Caveat "the red-pen rate is the number to watch"). Mock overlays live deltas the way the backend will recompute from events.jsonl: demo-time corrections ticked corrected 9→10 (rate tile 4.2%→4.7%), money 4→5, doc_type reclass 1→2, flagged count correctly did NOT shrink. Zero external requests, console clean. Awaiting backend T14 (`events.jsonl` + real `/stats/timeline`) for full DoD.
 
 ## Phase 4 — Integration + runtime (both; target ~1:00 PM = FREEZE)
 
