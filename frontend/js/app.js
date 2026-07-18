@@ -68,7 +68,7 @@
   }
 
   /* ---------- app state ---------- */
-  var state = { view: "capture", dropped: [], polling: null, nerdsTimer: null, selectedDoc: null, clients: [], justConfirmed: {} };
+  var state = { view: "capture", dropped: [], polling: null, nerdsTimer: null, selectedDoc: null, clients: [], justConfirmed: {}, knownReviewIds: {} };
   // New-client create form: open flag, the in-progress name, and the pruned
   // expected-docs list (seeded from ORGANIZER_TEMPLATE when the form opens).
   var newClientState = { open: false, name: "", docs: [], error: "" };
@@ -92,10 +92,10 @@
     if (view === "review") renderReview();
     if (view === "dashboard") renderDashboard();
     if (view === "nerds") {
-      renderNerds();
+      renderNerds(true);   // animate count-up + bars only on ENTRY
       // refresh the live telemetry every 5s while this view is on screen
       state.nerdsTimer = setInterval(function () {
-        if (state.view === "nerds") renderNerds();
+        if (state.view === "nerds") renderNerds(false);   // silent refresh — no re-animation
         else { clearInterval(state.nerdsTimer); state.nerdsTimer = null; }
       }, 5000);
     }
@@ -294,6 +294,10 @@
       if (!state.selectedDoc || !needs.some(function (d) { return d.id === state.selectedDoc; })) {
         state.selectedDoc = needs[0].id;
       }
+      // Cards settle in only on ARRIVAL: a doc whose id we haven't shown before
+      // gets .card-land once. Selection re-renders reuse the same ids, so nothing
+      // re-animates — same one-shot discipline as state.justConfirmed.
+      var landIdx = 0;
       listEl.innerHTML = needs.map(function (d) {
         var badge = d.status === "error"
           ? '<span class="rl-badge error">Error</span>'
@@ -302,10 +306,13 @@
             : '<span class="rl-badge needs">Needs review</span>';
         var client = clientName(d.client_id) || "Unassigned";
         var typ = d.status === "error" ? "Couldn’t read" : d.status === "unrecognized" ? "Unknown document" : d.doc_type;
-        return '<button class="rl-item ' + (d.id === state.selectedDoc ? "active" : "") + '" data-id="' + d.id + '">' +
+        var isNew = !state.knownReviewIds[d.id];
+        var landAttr = isNew ? ' style="animation-delay:' + Math.min(landIdx++, 6) * 40 + 'ms"' : '';
+        return '<button class="rl-item' + (isNew ? " card-land" : "") + (d.id === state.selectedDoc ? " active" : "") + '" data-id="' + d.id + '"' + landAttr + '>' +
           '<div class="rl-type">' + esc(typ) + pageLabel(d) + '</div>' +
           '<div class="rl-client">' + esc(client) + '</div>' + badge + '</button>';
       }).join("");
+      needs.forEach(function (d) { state.knownReviewIds[d.id] = 1; });
       listEl.querySelectorAll("[data-id]").forEach(function (b) {
         b.onclick = function () { state.selectedDoc = b.dataset.id; renderReview(); };
       });
@@ -359,6 +366,10 @@
         : '<div class="doc-image"><div class="noimg">No preview available</div></div>';
 
       var confirmed = doc.status === "confirmed";
+      // The strike-draw only plays on the confirm MOMENT — same one-shot key the
+      // dashboard ink-in uses (set in doConfirm, consumed by renderDashboard).
+      // Later re-renders of an already-confirmed doc render the settled strike.
+      var fresh = confirmed && !!state.justConfirmed[doc.client_id + "|" + doc.doc_type];
       var errored = doc.status === "error";
       var unrec = doc.status === "unrecognized";
       var classifyOnly = isClassifyOnly(doc.doc_type);
@@ -432,14 +443,14 @@
             // both sides masked (correctionHtml). Confirmed-clean: masked static.
             // Unconfirmed: masked with a pen-icon "edit" → cleartext input.
             if (confirmed && f.corrected) {
-              right += correctionHtml(k, f);
+              right += correctionHtml(k, f, fresh);
             } else if (confirmed) {
               right += '<div class="field-val tnum">' + esc(maskTin(f.value)) + '</div>';
             } else {
               right += tinEditHtml(k, f);
             }
           } else if (confirmed && f.corrected) {
-            right += correctionHtml(k, f);
+            right += correctionHtml(k, f, fresh);
           } else if (confirmed) {
             right += '<div class="field-val tnum">' + esc(isMoney(k) ? money(f.value) : f.value || "—") + '</div>';
           } else {
@@ -560,14 +571,14 @@
     });
   }
 
-  function correctionHtml(k, f) {
+  function correctionHtml(k, f, fresh) {
     var tin = isTin(k);
     // TIN keys: mask BOTH the struck original and the ink-blue corrected value.
     // The provenance ("a digit was fixed") still shows, but two SSNs never sit on
     // screen at once — the whole point of the privacy story.
     var oldV = tin ? maskTin(f.original_value) : (isMoney(k) ? money(f.original_value) : f.original_value);
     var newV = tin ? maskTin(f.value) : (isMoney(k) ? money(f.value) : f.value);
-    return '<div class="correction"><span class="old tnum">' + esc(oldV) + '</span>' +
+    return '<div class="correction' + (fresh ? " fresh" : "") + '"><span class="old tnum">' + esc(oldV) + '</span>' +
       '<span class="new tnum">' + esc(newV) + '</span>' +
       '<span class="pen-note">corrected</span></div>';
   }
@@ -878,7 +889,7 @@
   }
 
   /* ================= STATS FOR NERDS ================= */
-  function renderNerds() {
+  function renderNerds(animate) {
     api.getTimeline(24).then(function (t) {
       var tt = t.totals;
       var pct = function (x) { return (x * 100).toFixed(1) + "%"; };
@@ -914,7 +925,9 @@
       var bars = t.buckets.map(function (b, i) {
         var h = Math.max(4, Math.round(b.docs / max * 64));
         var recent = i >= t.buckets.length - 3;
-        return '<div class="bar' + (recent ? " recent" : "") + '" style="height:' + h + 'px" title="' +
+        var grow = animate ? " bar-grow" : "";
+        var delay = animate ? ";animation-delay:" + (i * 18) + "ms" : "";
+        return '<div class="bar' + (recent ? " recent" : "") + grow + '" style="height:' + h + 'px' + delay + '" title="' +
           esc(localHour(i)) + ' — ' + b.docs + ' doc' + (b.docs === 1 ? "" : "s") +
           (b.corrections ? ", " + b.corrections + " correction" + (b.corrections === 1 ? "" : "s") : "") + '"></div>';
       }).join("");
@@ -944,8 +957,35 @@
         '<span class="hand-note" style="font-size:17px">the red-pen rate is the number to watch</span></div>';
 
       $("nerds-body").innerHTML = html;
+      if (animate) countUpTiles($("nerds-body"));
     }).catch(function (e) {
       $("nerds-body").innerHTML = '<div class="rl-empty">Timeline unavailable (' + esc(e.message) + '). Needs backend /stats/timeline or mock mode.</div>';
+    });
+  }
+
+  // rAF count-up for headline tiles — parses the numeric lead of each tile,
+  // preserving its suffix (%, s) and decimal places. Entry-only (guarded by the
+  // caller) and self-guards prefers-reduced-motion so it never fights the CSS switch.
+  function countUpTiles(root) {
+    if (!root) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    root.querySelectorAll(".tile-num").forEach(function (el) {
+      var m = /^(\d+(?:\.\d+)?)(.*)$/.exec(el.textContent.trim());
+      if (!m) return;
+      var target = parseFloat(m[1]);
+      if (!isFinite(target) || target <= 0) return;
+      var suffix = m[2] || "";
+      var decimals = (m[1].split(".")[1] || "").length;
+      var dur = 500, start = null;
+      el.textContent = (0).toFixed(decimals) + suffix;
+      requestAnimationFrame(function frame(ts) {
+        if (start === null) start = ts;
+        var p = Math.min(1, (ts - start) / dur);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = (target * eased).toFixed(decimals) + suffix;
+        if (p < 1) requestAnimationFrame(frame);
+        else el.textContent = target.toFixed(decimals) + suffix;
+      });
     });
   }
 

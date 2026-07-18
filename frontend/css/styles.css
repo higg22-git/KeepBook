@@ -133,7 +133,15 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
   transition: background .15s, border-color .15s;
 }
 .dropzone:hover { border-color: var(--ink-blue); }
-.dropzone.dragover { border-color: var(--ink-blue); background: #2f5fd00d; }
+/* A single gentle ink-ring pulse when a drag enters, settling to a soft steady
+   ring while held. The class is added once on dragenter, so re-firing dragover
+   doesn't restart it; dragleave/drop removes it. */
+.dropzone.dragover { border-color: var(--ink-blue); background: #2f5fd00d; animation: dz-pulse .6s ease forwards; }
+@keyframes dz-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(47, 95, 208, 0); }
+  55%  { box-shadow: 0 0 0 6px rgba(47, 95, 208, .14); }
+  100% { box-shadow: 0 0 0 3px rgba(47, 95, 208, .12); }
+}
 .dz-icon {
   width: 44px; height: 54px; border: 2px solid var(--ink); border-radius: 5px;
   position: relative; background: var(--card);
@@ -249,12 +257,24 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
 
 /* the correction render — struck original + ink-blue corrected */
 .correction { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 6px; font-variant-numeric: tabular-nums; }
-.correction .old {
-  color: var(--red); text-decoration: line-through;
-  text-decoration-color: var(--red); text-decoration-thickness: 2px;
+/* Strike is drawn as a pseudo-line (not text-decoration) so it can animate a
+   left-to-right pen stroke. Base state = fully struck; reduced-motion lands here. */
+.correction .old { position: relative; color: var(--red); }
+.correction .old::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 50%;
+  height: 2px; background: var(--red);
+  transform: scaleX(1); transform-origin: left;
 }
 .correction .new { color: var(--ink-blue); font-weight: 700; }
 .correction .pen-note { font-family: var(--font-hand); font-size: 16px; color: var(--red); }
+
+/* Fresh confirm only: pen strikes the old value L→R, then the corrected value
+   and note settle in ~180ms behind it. Gated by .fresh (JS state.justConfirmed). */
+.correction.fresh .old::after { animation: strike-draw .32s ease forwards; }
+.correction.fresh .new,
+.correction.fresh .pen-note { animation: ink-fade-in .3s ease .18s backwards; }
+@keyframes strike-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ink-fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 
 /* ---------- masked TIN/SSN inline editor (unconfirmed) ---------- */
 .tin-field .field-val { display: inline; }
@@ -430,6 +450,12 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
 .nc-error { font-size: 12px; font-weight: 600; color: var(--red); margin-top: 12px; min-height: 15px; }
 .nc-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 
+/* Review card settle-in — plays once, only on a doc's first appearance (JS gates
+   the class via state.knownReviewIds). Base state = settled, so reduced-motion
+   simply lands here. */
+.rl-item.card-land { animation: card-land .36s ease backwards; }
+@keyframes card-land { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
 /* ---------- Stats line ---------- */
 .stats-bar {
   display: flex; align-items: center; gap: 26px; flex-wrap: wrap;
@@ -459,6 +485,10 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
 .bar-strip { display: flex; align-items: flex-end; gap: 4px; height: 64px; }
 .bar { flex: 1; border-radius: 2px 2px 0 0; background: #c6cdd6; min-width: 4px; }
 .bar.recent { background: var(--ink-blue); }
+/* Bars grow up from the axis on view entry (staggered inline). Base = full
+   height; the class only adds the grow, so reduced-motion lands settled. */
+.bar.bar-grow { transform-origin: bottom; animation: bar-grow .34s ease backwards; }
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .bar-axis { display: flex; justify-content: space-between; font: 500 10px ui-monospace, Menlo, monospace; color: var(--faint); margin-top: 6px; }
 
 .nerd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -485,4 +515,17 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
 @media (max-width: 760px) {
   .review-layout { grid-template-columns: 1fr; }
   .detail { grid-template-columns: 1fr; }
+}
+
+/* ---------- Reduced motion ---------- */
+/* One switch zeroes every CSS animation/transition. Every animated element's
+   base rule is authored at its settled state, so collapsing the duration lands
+   on the correct final frame (JS count-up self-guards via matchMedia). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
 }
