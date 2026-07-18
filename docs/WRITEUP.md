@@ -74,3 +74,5 @@ We track *silent wrong values* — present, well-formatted, incorrect — as a f
 ### What's next
 
 Every human correction is a labeled example — the product generates its own eval data in normal use, and the Stats-for-Nerds screen (rolling-24h correction rate, "the red-pen rate is the number to watch") is that flywheel's surface. Then: duplicate-document detection, auto-drafted "still waiting on" client nudges from the checklist, per-provider form templates, and the extended 1099/1098 family.
+
+Per-client CSV export ships today: one row per confirmed field, with correction provenance (the corrected value alongside the original it replaced) preserved in the sheet. It integrates with anything that imports CSV today; QuickBooks Online / TaxDome APIs are the named roadmap.
