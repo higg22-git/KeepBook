@@ -213,6 +213,11 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: point the var at a temp dir → all four artifacts land there; restart → state loads from it.
   Evidence: _none_
 
+- [ ] **T72 — "New since last visit" indicator on client cards** (agent; POST-DEMO backlog — founder ask, Sat ~2:20 PM, deliberately held at the freeze line)
+  DoD: newly-confirmed checklist entries carry a persistent "new" dot/badge on the dashboard until the user first views the dashboard after the confirm (not just the one-shot ink animation, which already ships and covers the live-demo moment); cleared per-view-visit, client-side state is fine.
+  Verify: confirm a doc while on Review → switch to Dashboard → dot present on that entry; switch away and back → dot gone.
+  Evidence: _none_
+
 - [ ] **T70 — Watched intake folder** (agent; POST-DEMO backlog — added Sat ~11:55)
   DoD: a designated ~/KeepBook Inbox/ folder watched by the backend (watchdog/fswatch); any image dropped there auto-ingests exactly like a drag-drop (same pipeline, same review gate). The on-device-native intake path: AirDrop from the phone lands a file, KeepBook eats it, no browser interaction. Risk note: needs dedup with the uploads dir + ignore non-images + never delete originals.
   Verify: drop an image into the folder with the app closed in the browser → doc appears in Review on next open.
