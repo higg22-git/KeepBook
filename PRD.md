@@ -168,7 +168,7 @@ The human-in-the-loop bin-review/correction step doubles as an ongoing evaluatio
 
 ## 10. Design System
 
-UNVERIFIED RENDER: a mockup was generated via Claude Design from the brief below, but the actual rendered output could **not** be independently verified for this PRD — the share link returned an authentication wall. Everything in this section reflects the design *brief as specified*, not a confirmed final render. Spot-check against the actual mockup before treating any of it as final.
+VERIFIED RENDER (updated Sat): the Claude Design mockup was retrieved and rendered locally — all four screens match this brief (paper/ink tokens, red-pen correction moment, yellow low-confidence flags, masked TINs, Caveat headlines). Mockup HTML + full-page render live in `docs/design/` (see `docs/design/DESIGN.md`).
 
 Visual identity adapted from an existing Vin Jones project (ghostline.vinjones.me) — a "paper and ink" world:
 

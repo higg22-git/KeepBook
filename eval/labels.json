@@ -1,0 +1,224 @@
+{
+  "1098_clean_01.png": {
+    "doc_type": "1098",
+    "fields": {
+      "borrower_name": "Tobias G. Delacroix",
+      "box1_mortgage_interest": "17725.14",
+      "lender": "Copperline Bank"
+    }
+  },
+  "1098_clean_02.png": {
+    "doc_type": "1098",
+    "fields": {
+      "borrower_name": "Dominic D. Marchetti",
+      "box1_mortgage_interest": "3959.09",
+      "lender": "Copperline Bank"
+    }
+  },
+  "1098_photo_01.png": {
+    "doc_type": "1098",
+    "fields": {
+      "borrower_name": "Tobias G. Delacroix",
+      "box1_mortgage_interest": "17725.14",
+      "lender": "Copperline Bank"
+    }
+  },
+  "1098_photo_02.png": {
+    "doc_type": "1098",
+    "fields": {
+      "borrower_name": "Dominic D. Marchetti",
+      "box1_mortgage_interest": "3959.09",
+      "lender": "Copperline Bank"
+    }
+  },
+  "1099int_clean_01.png": {
+    "doc_type": "1099-INT",
+    "fields": {
+      "box1_interest_income": "7706.17",
+      "payer": "Cascade Federal Bank",
+      "recipient_name": "Bianca F. Okafor"
+    }
+  },
+  "1099int_clean_02.png": {
+    "doc_type": "1099-INT",
+    "fields": {
+      "box1_interest_income": "4481.43",
+      "payer": "Union Trust Bank",
+      "recipient_name": "Ingrid P. Kowalski"
+    }
+  },
+  "1099int_photo_01.png": {
+    "doc_type": "1099-INT",
+    "fields": {
+      "box1_interest_income": "7706.17",
+      "payer": "Cascade Federal Bank",
+      "recipient_name": "Bianca F. Okafor"
+    }
+  },
+  "1099int_photo_02.png": {
+    "doc_type": "1099-INT",
+    "fields": {
+      "box1_interest_income": "4481.43",
+      "payer": "Union Trust Bank",
+      "recipient_name": "Ingrid P. Kowalski"
+    }
+  },
+  "1099nec_clean_01.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "14029.45",
+      "payer": "Granite Peak Builders LLP",
+      "recipient_name": "Desmond L. Fitzgerald",
+      "recipient_tin": "491-02-3545"
+    }
+  },
+  "1099nec_clean_02.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "8272.97",
+      "payer": "Thistledown Farms LLP",
+      "recipient_name": "Ezra B. Kowalski",
+      "recipient_tin": "47-1476565"
+    }
+  },
+  "1099nec_clean_03.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "25609.81",
+      "payer": "Coppervale Software Co.",
+      "recipient_name": "Gunnar K. Abernathy",
+      "recipient_tin": "486-36-9275"
+    }
+  },
+  "1099nec_photo_01.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "14029.45",
+      "payer": "Granite Peak Builders LLP",
+      "recipient_name": "Desmond L. Fitzgerald",
+      "recipient_tin": "491-02-3545"
+    }
+  },
+  "1099nec_photo_02.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "8272.97",
+      "payer": "Thistledown Farms LLP",
+      "recipient_name": "Ezra B. Kowalski",
+      "recipient_tin": "47-1476565"
+    }
+  },
+  "1099nec_photo_03.png": {
+    "doc_type": "1099-NEC",
+    "fields": {
+      "box1_nonemployee_comp": "25609.81",
+      "payer": "Coppervale Software Co.",
+      "recipient_name": "Gunnar K. Abernathy",
+      "recipient_tin": "486-36-9275"
+    }
+  },
+  "k1_clean_01.png": {
+    "doc_type": "K-1",
+    "fields": {
+      "ordinary_income": "114563.75",
+      "partner_name": "Rashid P. Bergstrom",
+      "partnership_ein": "73-8796124",
+      "partnership_name": "Blue Ridge Analytics Inc."
+    }
+  },
+  "k1_clean_02.png": {
+    "doc_type": "K-1",
+    "fields": {
+      "ordinary_income": "25516.38",
+      "partner_name": "Bianca S. Okafor",
+      "partnership_ein": "28-8403504",
+      "partnership_name": "Meridian Data Systems Inc."
+    }
+  },
+  "k1_photo_01.png": {
+    "doc_type": "K-1",
+    "fields": {
+      "ordinary_income": "114563.75",
+      "partner_name": "Rashid P. Bergstrom",
+      "partnership_ein": "73-8796124",
+      "partnership_name": "Blue Ridge Analytics Inc."
+    }
+  },
+  "k1_photo_02.png": {
+    "doc_type": "K-1",
+    "fields": {
+      "ordinary_income": "25516.38",
+      "partner_name": "Bianca S. Okafor",
+      "partnership_ein": "28-8403504",
+      "partnership_name": "Meridian Data Systems Inc."
+    }
+  },
+  "letter_01.png": {
+    "doc_type": "UNRECOGNIZED",
+    "fields": {}
+  },
+  "receipt_01.png": {
+    "doc_type": "UNRECOGNIZED",
+    "fields": {}
+  },
+  "w2_clean_01.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "101775.13",
+      "box2_fed_withheld": "10410.79",
+      "employee_name": "Rashid B. Bergstrom",
+      "employer": "Blue Ridge Analytics LLP",
+      "ssn": "432-47-9397"
+    }
+  },
+  "w2_clean_02.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "97262.94",
+      "box2_fed_withheld": "14179.97",
+      "employee_name": "Gunnar N. Nakamura",
+      "employer": "Ironwood Manufacturing Inc.",
+      "ssn": "480-31-3733"
+    }
+  },
+  "w2_clean_03.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "81187.24",
+      "box2_fed_withheld": "14906.34",
+      "employee_name": "Tobias D. Marchetti",
+      "employer": "Blue Ridge Analytics LLC",
+      "ssn": "419-38-8904"
+    }
+  },
+  "w2_photo_01.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "101775.13",
+      "box2_fed_withheld": "10410.79",
+      "employee_name": "Rashid B. Bergstrom",
+      "employer": "Blue Ridge Analytics LLP",
+      "ssn": "432-47-9397"
+    }
+  },
+  "w2_photo_02.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "97262.94",
+      "box2_fed_withheld": "14179.97",
+      "employee_name": "Gunnar N. Nakamura",
+      "employer": "Ironwood Manufacturing Inc.",
+      "ssn": "480-31-3733"
+    }
+  },
+  "w2_photo_03.png": {
+    "doc_type": "W-2",
+    "fields": {
+      "box1_wages": "81187.24",
+      "box2_fed_withheld": "14906.34",
+      "employee_name": "Tobias D. Marchetti",
+      "employer": "Blue Ridge Analytics LLC",
+      "ssn": "419-38-8904"
+    }
+  }
+}

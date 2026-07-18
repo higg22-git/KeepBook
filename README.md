@@ -12,7 +12,20 @@ See [PRD.md](PRD.md) for the full product spec, architecture, and evidence.
 
 - **Backend** — Python / FastAPI. Intake queue, classification + extraction via local Gemma 4 (`gemma4:e4b` through Ollama at `localhost:11434`), binning, checklist state.
 - **Frontend** — plain HTML/CSS/JS, no build step. Capture UI + bin-review/checklist dashboard.
-- **Eval** — `eval/` contains the kill-test scripts: `gen_w2.py` generates a synthetic W-2 (all data fake), `run_test.py` runs extraction against a local Ollama model.
+- **Eval** — `eval/` contains the kill-test scripts (`gen_w2.py`, `run_test.py`), the test-set generator (`gen_forms.py` — overlays fake data on official blank IRS PDFs in `eval/blank_forms/`), the phone-photo augmenter (`augment.py`), and the labeled test set itself (`eval/testset/`, 26 images + `labels.json`). All data synthetic.
+
+## Models
+
+Pull through [Ollama](https://ollama.com) — registry page: https://ollama.com/library/gemma4
+
+```bash
+ollama pull gemma4:e4b   # 9.6 GB — the deployed model (8.0B params, Q4_K_M, vision+tools)
+ollama pull gemma4:e2b   # 7.2 GB — comparison model for the kill test only
+```
+
+Do NOT use `gemma4:cloud` (runs inference in Ollama's cloud — disqualifying for the On-Device track) and don't rely on `gemma4:latest` (tag can move; pin `e4b`).
+
+Remote dev inference: the machine with the models runs `OLLAMA_HOST=0.0.0.0:11434 ollama serve`; other dev machines point at it over Tailscale (`http://<tailnet-name>:11434`). Demo-day inference runs entirely on the demo Mac.
 
 ## The kill test
 

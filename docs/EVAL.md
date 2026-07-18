@@ -2,6 +2,8 @@
 
 Top open item per PRD §9. This spec is deliberately concrete — build exactly this, no guessing needed. Extends `eval/gen_w2.py` + `eval/run_test.py`.
 
+**STATUS (Sat morning):** test set DONE — `eval/testset/` holds 26 labeled images (12 clean IRS-form overlays via `gen_forms.py`, 12 phone-photo variants via `augment.py`, 2 UNRECOGNIZED), `eval/labels.json` validated both directions. Remaining: `run_eval.py` (the runner + scoring below) and the real-phone-photo bucket. Optional extra data, licenses verified: [singhsays/fake-w2-us-tax-form-dataset](https://huggingface.co/datasets/singhsays/fake-w2-us-tax-form-dataset) (2,000 labeled synthetic W-2s, CC0, direct parquet download, no auth) and [naver-clova-ix/cord-v2](https://huggingface.co/datasets/naver-clova-ix/cord-v2) (real receipt photos, CC-BY-4.0) for more UNRECOGNIZED. Do NOT use FUNSD (non-commercial-only license) or RVL-CDIP (unclear tobacco-archive copyright) in this public repo.
+
 ## Goal
 
 Replace "one clean synthetic W-2" with a scored test set. Output two numbers judges can see: **doc-type classification accuracy** and **per-field extraction accuracy**, plus latency.

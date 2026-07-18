@@ -6,7 +6,7 @@ Base URL: `http://localhost:8000` (dev). All responses JSON.
 
 ## Model call (backend internal)
 
-Ollama at `http://localhost:11434/api/generate`, model `gemma4:e4b`, `temperature: 0`, image as base64 in `images[]`. See `eval/run_test.py` for the working reference call. During dev on a non-Mac machine, set `OLLAMA_HOST` to Vin's Mac on the LAN.
+Ollama at `http://localhost:11434/api/generate`, model `gemma4:e4b`, `temperature: 0`, image as base64 in `images[]`. See `eval/run_test.py` for the working reference call. The base URL must come from an env var (`OLLAMA_HOST`, default `http://localhost:11434`) — during dev, non-Mac machines point it at the model host over Tailscale (see README "Models"). Demo runs with the default.
 
 ## Data model
 
