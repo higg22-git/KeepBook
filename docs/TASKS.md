@@ -79,17 +79,17 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
 - [ ] **T30 — Capture/Submit screen** (V)
   DoD: drag-and-drop posts files to `/intake`; queue progress polls `/queue`; paper/ink tokens per docs/design/DESIGN.md; "Processed on this Mac. Nothing is uploaded." visible.
   Verify: drop 2 testset images in a browser → both appear in `/documents` and progress shows.
-  Evidence: _none_
+  Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — dropped 2 files onto the zone → "Queued · 2 files" list → Process → `/queue` polling rendered "0 of 2" with progress bar → "2 documents ready", and both materialized into Review (doc_007 `1099-INT`, doc_008 `UNRECOGNIZED`, each with preview image). Paper/ink tokens + "Processed on this Mac. Nothing is uploaded." present; page load fires ZERO external network requests (all `localhost` + `blob:`, Caveat font from local `assets/caveat.woff2`). Awaiting backend for full DoD (real `/intake` round-trip).
 
 - [ ] **T31 — Bin Review & Correction screen** (V)
   DoD: source image beside extracted fields; editing a field and confirming POSTs `/confirm`; corrected value renders red-strike original + ink-blue correction; survives reload.
   Verify: correct one field in the browser → reload → correction still displayed; `/stats` correction count incremented.
-  Evidence: _none_
+  Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — source image renders beside editable fields; corrected Marcus Whitfield W-2 Box 2 `70,110.00`→`9,183.44` in the browser, rendered original struck in red pen (computed `rgb(192,57,43)` + `line-through`) beside corrected value in ink blue (`rgb(47,95,208)`, weight 700) with a Caveat "corrected" note; the correction persists across reload (localStorage in mock; real backend `state.json` for full DoD) and `/stats` corrected-count went 1→2. UNRECOGNIZED receipt shows the manual `doc_type` + client pickers, empty confirm is blocked ("Pick a document type first"), and classifying it as K-1 for Chen flowed to the checklist. Awaiting backend for full DoD (real `/confirm` + server-side reload persistence).
 
 - [ ] **T32 — Checklist Dashboard** (V)
   DoD: clients from `/clients`; confirming a doc checks its checklist item with the ink animation; missing items obvious; stats line shows fields extracted / corrected.
   Verify: confirm a W-2 for a client expecting one → item inks in; client missing a K-1 shows it missing.
-  Evidence: _none_
+  Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — three journey clients render with correct gaps: Ruth Okafor 2/3 then 3/3 ("all in ✓") after confirming her 1099-INT, with the ink-in animation classes (`row-settle` + `ink-draw` check path) applied to ONLY the newly-confirmed row; Marcus Whitfield shows 1099-INT MISSING in highlighter (#ffd24a) with a Request link; Chen Partnership shows K-1 + 1098 MISSING. Stats line renders from `/stats` (fields extracted / corrected / correction rate, e.g. 26 / 2 / 7.7%). Awaiting backend for full DoD (live `/clients` + `/stats`).
 
 ## Phase 4 — Integration + runtime (both; target ~1:00 PM = FREEZE)
 
