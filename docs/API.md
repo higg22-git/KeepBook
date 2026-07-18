@@ -38,7 +38,11 @@ The eval runner (docs/EVAL.md) imports this same adapter and honors the same env
   "status": "pending" | "extracted" | "confirmed" | "unrecognized",
   "doc_type": "W-2" | "1099-NEC" | "1099-INT" | "1099-MISC" | "K-1" | "1098" | "UNRECOGNIZED",
   "image_path": "uploads/doc_001.png",
+  "received_at": "2026-07-18T09:14:02Z",   // OPTIONAL — set at intake; frontend shows "Received Jul 18" if present
   "fields": {                          // extracted; keys vary by doc_type
+    // per-field OPTIONAL "low_confidence": true — backend sets it from honest deterministic signals
+    // (model needed a retry, value empty, or format check failed e.g. SSN/EIN/TIN pattern, non-numeric money).
+    // Frontend renders the highlighter flag only when present. No fake probability scores.
     "employee_name": {"value": "Marcus D. Whitfield", "corrected": false},
     "ssn": {"value": "412-55-9083", "corrected": false},
     "employer": {"value": "Cascade Logistics LLC", "corrected": false},
@@ -71,10 +75,38 @@ Rule: a checklist item is satisfied only by a **confirmed** document. Unrecogniz
 | GET | `/clients` | — | `[Client, ...]` | Dashboard source. |
 | POST | `/clients` | `{"name": "...", "expected_docs": [...]}` | `Client` | Seed demo clients. |
 | GET | `/stats` | — | `{"fields_extracted": n, "fields_corrected": n, "correction_rate": 0.04}` | The live-accuracy metric from PRD §9. Cheap to compute, big in demo. |
+| GET | `/stats/timeline?hours=24` | — | see "Event log" below | **Stretch** — powers the Stats for Nerds screen. Build only after core endpoints are green. |
+
+## Event log (stretch tier — Stats for Nerds)
+
+The backend appends one line per pipeline event to `backend/events.jsonl` (gitignored, append-only — this is the "stringent log"; the UI shows only a rolling window):
+
+```jsonc
+{"ts": "2026-07-18T09:14:02Z", "type": "extracted", "doc_id": "doc_007", "doc_type": "W-2", "latency_s": 19.2, "fields_total": 5, "retried": false}
+{"ts": "2026-07-18T09:15:40Z", "type": "confirmed", "doc_id": "doc_007", "doc_type": "W-2", "fields_corrected": 1, "corrected_keys": ["box2_fed_withheld"], "manual_type_change": false}
+```
+
+`GET /stats/timeline?hours=24` aggregates it:
+
+```jsonc
+{
+  "hours": 24,
+  "buckets": [{"hour": "09:00", "docs": 4, "corrections": 1}],   // one per hour, oldest first
+  "totals": {
+    "docs_processed": 31, "fields_extracted": 214,
+    "fields_corrected": 9, "correction_rate": 0.042,
+    "first_try_type_acc": 0.94,          // confirmed doc_type == extracted doc_type
+    "median_latency_s": 19.2,
+    "corrections_by_category": {"money": 4, "tin_ssn": 2, "names": 2, "doc_type": 1}
+  }
+}
+```
+
+Category mapping from field keys: `box*`/`*wages*`/`*income*`/`*comp*`/`*interest*` → money; `ssn`/`*tin*`/`*ein*` → tin_ssn; `*name*`/`payer`/`employer`/`lender`/`partnership*` → names; a confirm that changes `doc_type` → doc_type. Mockup reference: screen 3 in docs/design/tax-intake-mockup.html ("Stats for Nerds — live eval telemetry, rolling 24 hours"). Privacy line shown in UI: stats age out after 24h; nothing leaves the Mac.
 
 ## Persistence
 
-Single JSON file (`state.json`) written after every mutation. No DB. Restart-safe = demo-safe.
+Single JSON file (`state.json`) written after every mutation. No DB. Restart-safe = demo-safe. Event log is a separate append-only `backend/events.jsonl`.
 
 ## Processing loop
 

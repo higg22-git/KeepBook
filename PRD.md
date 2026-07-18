@@ -187,6 +187,7 @@ Type: **Caveat** (handwritten) for personality and headlines only; system sans w
 1. **Capture / Submit** — kinetic, phone-first document submission.
 2. **Bin Review & Correction** — the trust screen. It visibly shows the model's mistake being caught: the wrong value struck through in red pen, the corrected value in ink blue beside it. The correction is shown, not hidden.
 3. **Checklist Dashboard** — the hero screen. A per-client missing-document checklist that visibly "inks itself in" as documents are confirmed. This is the one deliberate animation moment, chosen because it is the clearest visualization of the actual pain point (what is this client still missing), not the flashiest technical moment.
+4. **Stats for Nerds** (STRETCH, added Sat morning) — rolling-24h live eval telemetry: correction rate ("the red-pen rate is the number to watch"), first-try classification accuracy, corrections by field category, docs/hour, median latency. This is PRD §9's "correction rate as live accuracy metric" promoted to a screen. Backend keeps a stringent append-only event log; the UI deliberately shows only the last 24h, and states that nothing leaves the Mac. Built only after the three core screens are green (docs/TASKS.md T14/T33).
 
 ---
 

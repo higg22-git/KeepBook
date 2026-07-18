@@ -52,6 +52,11 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: `receipt_01.png` through the pipeline → `status: unrecognized`; then POST `/confirm` with a manual `doc_type` + `client_id` succeeds.
   Evidence: _none_
 
+- [ ] **T14 — Event log + /stats/timeline (STRETCH — only after T10-T13 green)** (V/agent)
+  DoD: backend appends extraction/confirm events to `backend/events.jsonl` per docs/API.md "Event log"; `GET /stats/timeline?hours=24` aggregates buckets + totals incl. corrections_by_category and first_try_type_acc.
+  Verify: process 2 docs, correct 1 field, confirm both → timeline totals show 2 docs, correct correction count, category attribution matches the corrected key.
+  Evidence: _none_
+
 ## Phase 2 — Eval (owner V/agent; target ~12:30 PM)
 
 - [ ] **T20 — `eval/run_eval.py` per docs/EVAL.md** (V/agent)
@@ -90,6 +95,11 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   DoD: clients from `/clients`; confirming a doc checks its checklist item with the ink animation; missing items obvious; stats line shows fields extracted / corrected.
   Verify: confirm a W-2 for a client expecting one → item inks in; client missing a K-1 shows it missing.
   Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — three journey clients render with correct gaps: Ruth Okafor 2/3 then 3/3 ("all in ✓") after confirming her 1099-INT, with the ink-in animation classes (`row-settle` + `ink-draw` check path) applied to ONLY the newly-confirmed row; Marcus Whitfield shows 1099-INT MISSING in highlighter (#ffd24a) with a Request link; Chen Partnership shows K-1 + 1098 MISSING. Stats line renders from `/stats` (fields extracted / corrected / correction rate, e.g. 26 / 2 / 7.7%). Awaiting backend for full DoD (live `/clients` + `/stats`).
+
+- [ ] **T33 — "Stats for Nerds" screen (STRETCH — only after T30-T32 green)** (V/agent)
+  DoD: fourth view rendering `GET /stats/timeline?hours=24` per mockup screen 3 (docs/design/tax-intake-mockup.html): headline tiles (docs processed, first-try classification %, correction rate, median latency), docs-per-hour bars, corrections-by-category list, the "Past 24 hours only... Nothing leaves this Mac" line, "the red-pen rate is the number to watch" tagline.
+  Verify: with seeded events, all tiles render real numbers; mock mode works without backend.
+  Evidence: _none_
 
 ## Phase 4 — Integration + runtime (both; target ~1:00 PM = FREEZE)
 
