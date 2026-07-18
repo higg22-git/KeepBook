@@ -195,10 +195,10 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: template applies to a new client; per-client edit round-trips; a derived checklist matches the client's prior confirmed doc types.
   Evidence: _none_
 
-- [ ] **T68 — Progressive Web App packaging** (agent; POST-DEMO — added Sat AM per founder)
+- [ ] **T68 — Progressive Web App packaging** (agent; pulled forward Sat ~11:40 AM per founder)
   DoD: manifest.json (name, theme paper/ink colors, icons from logo-mark.svg rendered to 192/512 PNG), installability from localhost Chrome ("Install KeepBook" → dock/Launchpad icon launches the app window); optional service worker for offline shell (aligns with the on-device story — the whole app already runs offline once served). Note: install requires localhost or HTTPS — localhost qualifies, so no cert work needed for the single-machine product.
   Verify: Chrome shows the install affordance; installed icon launches to the dashboard.
-  Evidence: _none_
+  Evidence (partial — orchestrator): manifest.json (standalone, start_url /#dashboard, paper theme colors) + icon-192/512 rendered from logo-mark.svg on a cream canvas, wired via <link rel=manifest> + apple-touch-icon + theme-color; `curl /manifest.json` → 200 application/json, icons 200 image/png; manifest parses. Commit pushed. REMAINING (Vin, 30s): open localhost:8100 in real Chrome → address-bar install icon → "Install" → verify dock icon launches standalone to Dashboard. Box stays unchecked until that click happens. Service worker deliberately NOT added pre-freeze (cache-invalidation risk on the demo tab outweighs the offline-shell nicety; the product already runs offline behind the local server).
 
 - [x] **T65 — Classify-only document types** (agent; MEDIUM, eval-gated)
   DoD: extend the type enum with classify-only types (`extract: false` in schema): 1099-DIV/-B/-R/-G, 1098-T/-E, 1095-A, property tax statement, charitable receipt, brokerage statement, W-9, engagement letter. These get classified + client-assigned + human-confirmed, zero field extraction — so the silent-wrong failure class cannot exist for them; they still satisfy checklist items. Risk register (recorded): larger enum = more force-fit surface (mitigation: UNRECOGNIZED discipline unchanged + mandatory confirm); new types eval-unverified (mitigation: small classify-only eval bucket, labeled UNVERIFIED until run).
