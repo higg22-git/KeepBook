@@ -17,12 +17,14 @@ physical order they were applied:
 
 Safety contract (the good case must never get worse)
 ----------------------------------------------------
-A clean scan fills the frame with a white page and has NO dark desk border.
-Page detection therefore finds a quad that covers ~the whole frame, and the
-geometric stage is skipped. Illumination flattening is a divide-by-background
-gain map, which is ~identity on an already-flat white page. Every stage is
-wrapped so that on ANY failure (or any doubt about the detection) the original
-bytes are returned unchanged. Determinism: no randomness anywhere.
+A clean scan fills the frame with a white page and has NO dark desk border, so
+its outer border ring is near-white. Such inputs are returned BYTE-IDENTICAL —
+no decode/re-encode, no photometric touch-up (A/B eval showed even gentle
+photometric processing of clean scans costs fields: digits misread after a
+white-point stretch + re-encode). Only images that show a dark desk border go
+through the transform chain. Every stage is additionally wrapped so that on ANY
+failure the original bytes are returned unchanged. Determinism: no randomness
+anywhere.
 """
 
 import io
@@ -43,6 +45,12 @@ _FILLS_FRAME_AREA_FRAC = 0.97
 # A clean scan also has almost no dark desk pixels. If the fraction of "dark"
 # pixels (page-vs-desk split by Otsu) is below this, there is no desk to remove.
 _DESK_PIXEL_FRAC = 0.02
+# Clean-input gate: median luminance of the outer border ring. A clean scan is
+# paper edge-to-edge (median ~255); a desk-framed photo's ring is desk
+# (measured 32-54 across the eval photo bucket). >= this -> pass through
+# byte-identical. Ring width = 3% of the short side.
+_CLEAN_BORDER_LUMA = 200.0
+_BORDER_RING_FRAC = 0.03
 # Long side (px) the page is upscaled to if the cropped region is smaller, so
 # small text survives the vision encoder's internal downsample.
 _UPSCALE_LONG_SIDE = 1600
@@ -67,6 +75,30 @@ def _encode_png(img) -> bytes:
     if not ok:
         raise RuntimeError("cv2.imencode failed")
     return buf.tobytes()
+
+
+# ---------------------------------------------------------------------------
+# Clean-input gate
+# ---------------------------------------------------------------------------
+def _looks_already_clean(img) -> bool:
+    """True when the image has no dark desk border (scan/render, not a photo).
+
+    Clean scans are paper edge-to-edge: the outer border ring is near-white.
+    Desk-framed photos have a dark ring. Median over the whole ring tolerates
+    ink, page corners, and small margins.
+    """
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape
+    m = max(2, int(_BORDER_RING_FRAC * min(h, w)))
+    ring = np.concatenate(
+        [
+            gray[:m, :].ravel(),
+            gray[-m:, :].ravel(),
+            gray[:, :m].ravel(),
+            gray[:, -m:].ravel(),
+        ]
+    )
+    return float(np.median(ring)) >= _CLEAN_BORDER_LUMA
 
 
 # ---------------------------------------------------------------------------
@@ -207,16 +239,21 @@ def _upscale_if_small(img):
 def preprocess(image_bytes: bytes) -> bytes:
     """Clean up a document photo so the vision model can read it.
 
-    Deterministic. Safe on already-clean scans (geometric stage self-skips when
-    the page fills the frame). Returns the ORIGINAL bytes unchanged on any
-    failure, so it can never break or degrade the pipeline.
+    Deterministic. Already-clean inputs (no dark desk border) are returned
+    BYTE-IDENTICAL — the transform chain runs only on desk-framed photos.
+    Returns the ORIGINAL bytes unchanged on any failure, so it can never break
+    or degrade the pipeline.
     """
     try:
         img = _decode(image_bytes)
         if img is None:
             return image_bytes
 
-        # --- Geometric: crop the page off the desk + deskew, only for photos ---
+        # --- Clean-input gate: scans/renders pass through byte-identical ---
+        if _looks_already_clean(img):
+            return image_bytes
+
+        # --- Geometric: crop the page off the desk + deskew ---
         try:
             quad, dark_frac = _detect_page(img)
         except Exception:

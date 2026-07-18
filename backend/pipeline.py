@@ -12,11 +12,44 @@ Strict JSON, temperature 0 (enforced by model_runtime). One retry on
 unparseable JSON, then the document is marked UNRECOGNIZED.
 """
 
+import base64
+import binascii
 import json
 import os
 import re
 
 from model_runtime import extract as model_extract
+
+
+# ---------------------------------------------------------------------------
+# Optional intake preprocessing (backend/preprocess.py).
+# Enabled by default; PREPROCESS=0 disables it (the A/B "off" arm). Runs on the
+# raw image bytes before the model ever sees them: document-region crop,
+# perspective/deskew, illumination flattening, upscale-if-small. Any failure
+# falls back to the untouched image, so it can never break or degrade intake.
+# ---------------------------------------------------------------------------
+def _preprocess_enabled() -> bool:
+    return os.environ.get("PREPROCESS", "1").strip().lower() not in (
+        "0", "false", "no", "off", "",
+    )
+
+
+def _maybe_preprocess(image_b64: str) -> str:
+    if not _preprocess_enabled():
+        return image_b64
+    try:
+        raw = base64.b64decode(image_b64)
+    except (binascii.Error, ValueError):
+        return image_b64
+    try:
+        from preprocess import preprocess  # lazy: no cv2 import unless enabled
+
+        cleaned = preprocess(raw)
+        if cleaned and cleaned != raw:
+            return base64.b64encode(cleaned).decode()
+    except Exception:  # noqa: BLE001 - preprocessing must never break intake
+        return image_b64
+    return image_b64
 
 # ---------------------------------------------------------------------------
 # Canonical doc types + per-type field schema.
@@ -331,6 +364,7 @@ def run_pipeline(image_b64: str) -> dict:
         "re_asks": int,    # focused single-field follow-up calls issued (RE_ASK)
       }
     """
+    image_b64 = _maybe_preprocess(image_b64)
     if _flag("CASCADE", "0"):
         doc_type, classify_raw, c_retried = classify_cascade(image_b64)
     else:
