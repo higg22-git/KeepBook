@@ -1,0 +1,6 @@
+# Generated at build/run time — not committed.
+.run/
+KeepBook.app/
+Stop KeepBook.app/
+*.icns
+*.iconset/
