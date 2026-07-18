@@ -192,7 +192,7 @@
       if (okType) { try { f._url = URL.createObjectURL(f); } catch (e) {} }
       state.dropped.push(f);
     }
-    if (rejected) toast(rejected + (rejected === 1 ? " file" : " files") + " skipped — KeepBook reads images, not PDFs");
+    if (rejected) toast(rejected + (rejected === 1 ? " file" : " files") + " skipped — KeepBook reads images only (PNG/JPG)");
     renderCapture();
   }
 
