@@ -5,14 +5,33 @@
     "status": "confirmed",
     "doc_type": "W-2",
     "image_path": "mock/images/doc_001_w2.png",
-    "received_date": "Jul 14",
+    "received_at": "2026-07-14T15:22:00Z",
     "fields": {
-      "employer": {"value": "Cascade Logistics Inc.", "corrected": false},
-      "ein": {"value": "91-2044837", "corrected": false},
-      "employee_name": {"value": "Ruth A. Okafor", "corrected": false},
-      "ssn": {"value": "532-48-4821", "corrected": false},
-      "box1_wages": {"value": "84,120.00", "corrected": true, "original_value": "84,210.00"},
-      "box2_fed_withheld": {"value": "9,466.00", "corrected": false}
+      "employer": {
+        "value": "Cascade Logistics Inc.",
+        "corrected": false
+      },
+      "ein": {
+        "value": "91-2044837",
+        "corrected": false
+      },
+      "employee_name": {
+        "value": "Ruth A. Okafor",
+        "corrected": false
+      },
+      "ssn": {
+        "value": "532-48-4821",
+        "corrected": false
+      },
+      "box1_wages": {
+        "value": "84,120.00",
+        "corrected": true,
+        "original_value": "84,210.00"
+      },
+      "box2_fed_withheld": {
+        "value": "9,466.00",
+        "corrected": false
+      }
     }
   },
   {
@@ -21,12 +40,24 @@
     "status": "confirmed",
     "doc_type": "1098",
     "image_path": "mock/images/doc_002_1098.png",
-    "received_date": "Jul 9",
+    "received_at": "2026-07-09T10:05:00Z",
     "fields": {
-      "lender": {"value": "First Federal Savings", "corrected": false},
-      "borrower": {"value": "Ruth A. Okafor", "corrected": false},
-      "borrower_tin": {"value": "532-48-4821", "corrected": false},
-      "box1_mortgage_interest": {"value": "12,884.53", "corrected": false}
+      "lender": {
+        "value": "First Federal Savings",
+        "corrected": false
+      },
+      "borrower": {
+        "value": "Ruth A. Okafor",
+        "corrected": false
+      },
+      "borrower_tin": {
+        "value": "532-48-4821",
+        "corrected": false
+      },
+      "box1_mortgage_interest": {
+        "value": "12,884.53",
+        "corrected": false
+      }
     }
   },
   {
@@ -35,12 +66,29 @@
     "status": "extracted",
     "doc_type": "1099-INT",
     "image_path": "mock/images/doc_003_1099int.png",
+    "received_at": "2026-07-18T07:46:00Z",
     "fields": {
-      "payer": {"value": "JPMorgan Chase Bank, N.A.", "corrected": false},
-      "recipient": {"value": "Ruth A. Okafor", "corrected": false},
-      "recipient_tin": {"value": "532-48-4821", "corrected": false},
-      "box1_interest": {"value": "1,284.09", "corrected": false, "low_confidence": true},
-      "box4_fed_withheld": {"value": "0.00", "corrected": false}
+      "payer": {
+        "value": "JPMorgan Chase Bank, N.A.",
+        "corrected": false
+      },
+      "recipient": {
+        "value": "Ruth A. Okafor",
+        "corrected": false
+      },
+      "recipient_tin": {
+        "value": "532-48-4821",
+        "corrected": false
+      },
+      "box1_interest": {
+        "value": "1,284.09",
+        "corrected": false,
+        "low_confidence": true
+      },
+      "box4_fed_withheld": {
+        "value": "0.00",
+        "corrected": false
+      }
     }
   },
   {
@@ -49,13 +97,33 @@
     "status": "extracted",
     "doc_type": "W-2",
     "image_path": "mock/images/doc_004_w2.png",
+    "received_at": "2026-07-18T07:46:30Z",
     "fields": {
-      "employer": {"value": "Cascade Logistics LLC", "corrected": false},
-      "ein": {"value": "84-3319027", "corrected": false},
-      "employee_name": {"value": "Marcus D. Whitfield", "corrected": false},
-      "ssn": {"value": "412-55-9083", "corrected": false},
-      "box1_wages": {"value": "68,420.15", "corrected": false},
-      "box2_fed_withheld": {"value": "70,110.00", "corrected": false, "low_confidence": true}
+      "employer": {
+        "value": "Cascade Logistics LLC",
+        "corrected": false
+      },
+      "ein": {
+        "value": "84-3319027",
+        "corrected": false
+      },
+      "employee_name": {
+        "value": "Marcus D. Whitfield",
+        "corrected": false
+      },
+      "ssn": {
+        "value": "412-55-9083",
+        "corrected": false
+      },
+      "box1_wages": {
+        "value": "68,420.15",
+        "corrected": false
+      },
+      "box2_fed_withheld": {
+        "value": "70,110.00",
+        "corrected": false,
+        "low_confidence": true
+      }
     }
   },
   {
@@ -64,13 +132,28 @@
     "status": "confirmed",
     "doc_type": "1099-NEC",
     "image_path": "mock/images/doc_006_1099nec.png",
-    "received_date": "Jul 11",
+    "received_at": "2026-07-11T13:40:00Z",
     "fields": {
-      "payer": {"value": "Brightwater Consulting LLC", "corrected": false},
-      "recipient": {"value": "Chen Partnership", "corrected": false},
-      "recipient_tin": {"value": "88-1902244", "corrected": false},
-      "box1_nonemployee_comp": {"value": "42,500.00", "corrected": false},
-      "box4_fed_withheld": {"value": "0.00", "corrected": false}
+      "payer": {
+        "value": "Brightwater Consulting LLC",
+        "corrected": false
+      },
+      "recipient": {
+        "value": "Chen Partnership",
+        "corrected": false
+      },
+      "recipient_tin": {
+        "value": "88-1902244",
+        "corrected": false
+      },
+      "box1_nonemployee_comp": {
+        "value": "42,500.00",
+        "corrected": false
+      },
+      "box4_fed_withheld": {
+        "value": "0.00",
+        "corrected": false
+      }
     }
   },
   {
@@ -79,6 +162,7 @@
     "status": "unrecognized",
     "doc_type": "UNRECOGNIZED",
     "image_path": "mock/images/doc_007_receipt.png",
+    "received_at": "2026-07-18T07:47:00Z",
     "fields": {}
   }
 ]

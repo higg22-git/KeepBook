@@ -51,7 +51,8 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-      }
+      },
+      getTimeline: function (hours) { return j("/stats/timeline?hours=" + (hours || 24)); }
     };
   })();
 
@@ -60,16 +61,22 @@
    * localStorage so corrections survive a reload during the demo.
    * ------------------------------------------------------------------ */
   var mock = (function () {
-    var STORE_KEY = "keepbook_mock_v3";
-    var state = null;      // {clients, documents, uploads}
+    var STORE_KEY = "keepbook_mock_v4";
+    var state = null;      // {clients, documents, uploads, type_changes}
     var readyPromise = null;
+    var timelineFixture = null;
+
+    // What the shipped fixtures contribute to live stats — used to overlay
+    // live deltas (demo-time corrections) onto the timeline fixture's 24h story.
+    var BASELINE = { fields_extracted: 26, fields_corrected: 1, low_confidence: 2, docs: 6,
+                     categories: { money: 1, tin_ssn: 0, names: 0 } };
 
     function loadFixtures() {
       return Promise.all([
         fetch("mock/clients.json").then(function (r) { return r.json(); }),
         fetch("mock/documents.json").then(function (r) { return r.json(); })
       ]).then(function (res) {
-        return { clients: res[0], documents: res[1], uploads: [] };
+        return { clients: res[0], documents: res[1], uploads: [], type_changes: 0 };
       });
     }
 
@@ -105,6 +112,7 @@
             status: u.doc_type === "UNRECOGNIZED" ? "unrecognized" : "extracted",
             doc_type: u.doc_type,
             image_path: u.image_path || null,
+            received_at: new Date().toISOString(),
             fields: u.fields || {}
           });
         }
@@ -225,6 +233,9 @@
         return ready().then(function () {
           var d = state.documents.filter(function (x) { return x.id === id; })[0];
           if (!d) return Promise.reject(new Error("no doc " + id));
+          if (payload.doc_type && payload.doc_type !== d.doc_type) {
+            state.type_changes = (state.type_changes || 0) + 1;   // manual reclass (e.g. UNRECOGNIZED -> K-1)
+          }
           if (payload.doc_type) d.doc_type = payload.doc_type;
           if (payload.client_id) d.client_id = payload.client_id;
           // Apply field edits: anything differing from extraction = corrected.
@@ -235,6 +246,7 @@
             var baseline = cur.corrected ? cur.original_value : cur.value;
             if (newVal !== String(cur.value)) {
               d.fields[k] = { value: newVal, corrected: true, original_value: baseline };
+              if (cur.low_confidence) d.fields[k].low_confidence = true;  // flag history survives the fix
             }
           });
           d.status = "confirmed";
@@ -244,9 +256,63 @@
           persist();
           return clone(d);
         });
+      },
+
+      // Timeline = fixture's believable 24h story + live deltas from this
+      // session's state (so demo-time corrections tick the numbers up, the
+      // way the real backend recomputes from events.jsonl).
+      getTimeline: function () {
+        var fixtureP = timelineFixture
+          ? Promise.resolve(timelineFixture)
+          : fetch("mock/timeline.json").then(function (r) { return r.json(); })
+              .then(function (t) { timelineFixture = t; return t; });
+        return Promise.all([ready(), fixtureP]).then(function (res) {
+          tick();
+          var t = clone(res[1]);
+          // live tallies over current state
+          var live = { ext: 0, corr: 0, low: 0, cats: { money: 0, tin_ssn: 0, names: 0 } };
+          state.documents.forEach(function (d) {
+            if (d.status === "unrecognized") return;
+            Object.keys(d.fields || {}).forEach(function (k) {
+              var f = d.fields[k];
+              live.ext++;
+              if (f.low_confidence) live.low++;
+              if (f.corrected) { live.corr++; live.cats[categoryOf(k)]++; }
+            });
+          });
+          var dExt = live.ext - BASELINE.fields_extracted;
+          var dCorr = live.corr - BASELINE.fields_corrected;
+          var dLow = live.low - BASELINE.low_confidence;
+          var dDocs = state.documents.length - BASELINE.docs;
+          var tt = t.totals;
+          tt.fields_extracted += dExt;
+          tt.fields_corrected += dCorr;
+          tt.fields_low_confidence += dLow;
+          tt.docs_processed += dDocs;
+          tt.correction_rate = tt.fields_extracted
+            ? +(tt.fields_corrected / tt.fields_extracted).toFixed(4) : 0;
+          var cats = tt.corrections_by_category;
+          cats.money += live.cats.money - BASELINE.categories.money;
+          cats.tin_ssn += live.cats.tin_ssn - BASELINE.categories.tin_ssn;
+          cats.names += live.cats.names - BASELINE.categories.names;
+          cats.doc_type += state.type_changes || 0;
+          // fold live deltas into the newest bucket so the strip stays coherent
+          var last = t.buckets[t.buckets.length - 1];
+          last.docs = Math.max(0, last.docs + dDocs);
+          last.corrections = Math.max(0, last.corrections + dCorr);
+          return t;
+        });
       }
     };
   })();
+
+  // docs/API.md category mapping for corrections_by_category
+  function categoryOf(key) {
+    var k = key.toLowerCase();
+    if (/ssn|tin|ein/.test(k)) return "tin_ssn";
+    if (/^box|wages|income|comp|interest|withheld|mortgage/.test(k)) return "money";
+    return "names";
+  }
 
   function clone(x) { return JSON.parse(JSON.stringify(x)); }
 

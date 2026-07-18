@@ -297,6 +297,38 @@ main { max-width: 900px; margin: 0 auto; padding: 32px 24px 80px; }
 .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .stats-note { font-family: var(--font-hand); font-size: 17px; color: var(--faint); margin-left: auto; }
 
+/* ---------- Stats for Nerds ---------- */
+.live-dot-wrap { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--ink-blue); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-blue); animation: live-pulse 2s ease infinite; }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.nerd-runtime { font-size: 12px; color: var(--faint); white-space: nowrap; }
+
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-soft); }
+.tile-num { font-size: 24px; font-weight: 700; }
+.tile-lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+.nerd-block { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-top: 14px; box-shadow: var(--shadow-soft); }
+.nb-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+.nb-hint { font-size: 11.5px; color: var(--faint); }
+.bar-strip { display: flex; align-items: flex-end; gap: 4px; height: 64px; }
+.bar { flex: 1; border-radius: 2px 2px 0 0; background: #c6cdd6; min-width: 4px; }
+.bar.recent { background: var(--ink-blue); }
+.bar-axis { display: flex; justify-content: space-between; font: 500 10px ui-monospace, Menlo, monospace; color: var(--faint); margin-top: 6px; }
+
+.nerd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.nerd-cols .nerd-block { margin-top: 14px; }
+.nb-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 0; }
+.nb-lbl { color: var(--muted); }
+.nb-val { font-weight: 600; }
+.hl-chip { background: linear-gradient(transparent 12%, var(--highlighter) 12% 88%, transparent 88%); padding: 0 4px; }
+.nerd-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; }
+
+@media (max-width: 760px) {
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .nerd-cols { grid-template-columns: 1fr; }
+}
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
   background: var(--ink); color: var(--card); font-size: 13px; font-weight: 600;

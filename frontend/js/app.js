@@ -56,6 +56,14 @@
     if (view === "capture") renderCapture();
     if (view === "review") renderReview();
     if (view === "dashboard") renderDashboard();
+    if (view === "nerds") renderNerds();
+  }
+
+  function fmtReceived(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d)) return null;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
   /* ================= CAPTURE / SUBMIT ================= */
@@ -360,7 +368,7 @@
     docs.forEach(function (d) {
       if (d.client_id === c.id && d.status === "confirmed") {
         var corr = Object.keys(d.fields || {}).filter(function (k) { return d.fields[k].corrected; }).length;
-        meta[d.doc_type] = { date: d.received_date, corr: corr };
+        meta[d.doc_type] = { date: fmtReceived(d.received_at), corr: corr };
       }
     });
 
@@ -410,6 +418,78 @@
       '<div class="stat"><span class="num rate tnum">' + rate + '</span><span class="lbl">correction rate</span></div>' +
       '<span class="stats-note">measured on real documents</span>' +
       '</div>';
+  }
+
+  /* ================= STATS FOR NERDS ================= */
+  function renderNerds() {
+    api.getTimeline(24).then(function (t) {
+      var tt = t.totals;
+      var pct = function (x) { return (x * 100).toFixed(1) + "%"; };
+      var pct0 = function (x) { return Math.round(x * 100) + "%"; };
+
+      var html = "";
+      html += '<div class="screen-head">' +
+        '<div><div style="display:flex;align-items:center;gap:10px">' +
+        '<h1>Stats for nerds</h1><span class="live-dot-wrap"><span class="live-dot"></span>live</span></div>' +
+        '<div class="sub">Past 24 hours only — stats reset as they age out. Nothing leaves this Mac.</div></div>' +
+        '<div class="nerd-runtime tnum">Gemma 4 e4b · on-device</div></div>';
+
+      // headline tiles (T33: docs processed, first-try classification %, correction rate, median latency)
+      html += '<div class="tiles">' +
+        tile(tt.docs_processed, "docs processed", "") +
+        tile(pct0(tt.first_try_type_acc), "classified right first try", "blue") +
+        tile(pct(tt.correction_rate), "correction rate (red pen)", "red") +
+        tile(tt.median_latency_s + "s", "median per doc", "") +
+        '</div>';
+
+      // docs-per-hour bar strip
+      var max = Math.max.apply(null, t.buckets.map(function (b) { return b.docs; }).concat([1]));
+      var bars = t.buckets.map(function (b, i) {
+        var h = Math.max(4, Math.round(b.docs / max * 64));
+        var recent = i >= t.buckets.length - 3;
+        return '<div class="bar' + (recent ? " recent" : "") + '" style="height:' + h + 'px" title="' +
+          esc(b.hour) + ' — ' + b.docs + ' doc' + (b.docs === 1 ? "" : "s") +
+          (b.corrections ? ", " + b.corrections + " correction" + (b.corrections === 1 ? "" : "s") : "") + '"></div>';
+      }).join("");
+      html += '<div class="nerd-block">' +
+        '<div class="nb-head"><span class="section-label" style="margin:0">Docs per hour</span>' +
+        '<span class="nb-hint">now ←</span></div>' +
+        '<div class="bar-strip">' + bars + '</div>' +
+        '<div class="bar-axis"><span>24h ago</span><span>12h</span><span>now</span></div></div>';
+
+      // extraction + corrections-by-category blocks
+      var lowPct = tt.fields_extracted ? pct(tt.fields_low_confidence / tt.fields_extracted) : "0%";
+      var cats = tt.corrections_by_category;
+      html += '<div class="nerd-cols">' +
+        '<div class="nerd-block"><div class="section-label" style="margin-top:0">Extraction</div>' +
+        nbRow("Fields extracted", '<span>' + tt.fields_extracted + '</span>') +
+        nbRow("Flagged low-confidence", '<span class="hl-chip">' + tt.fields_low_confidence + ' · ' + lowPct + '</span>') +
+        nbRow("Corrected by a reviewer", '<span style="color:var(--red)">' + tt.fields_corrected + ' · ' + pct(tt.correction_rate) + '</span>') +
+        '</div>' +
+        '<div class="nerd-block"><div class="section-label" style="margin-top:0">Corrections by field</div>' +
+        nbRow("Dollar amounts", '<span>' + cats.money + '</span>') +
+        nbRow("TIN / SSN digits", '<span>' + cats.tin_ssn + '</span>') +
+        nbRow("Payer / employer names", '<span>' + cats.names + '</span>') +
+        nbRow("Document type (reclassified)", '<span>' + cats.doc_type + '</span>') +
+        '</div></div>';
+
+      html += '<div class="nerd-foot"><span class="privacy-line">Processed on this Mac. Nothing is uploaded.</span>' +
+        '<span class="hand-note" style="font-size:17px">the red-pen rate is the number to watch</span></div>';
+
+      $("nerds-body").innerHTML = html;
+    }).catch(function (e) {
+      $("nerds-body").innerHTML = '<div class="rl-empty">Timeline unavailable (' + esc(e.message) + '). Needs backend /stats/timeline or mock mode.</div>';
+    });
+  }
+
+  function tile(num, label, tone) {
+    var cls = tone === "blue" ? " style=\"color:var(--ink-blue)\"" : tone === "red" ? " style=\"color:var(--red)\"" : "";
+    return '<div class="tile"><div class="tile-num tnum"' + cls + '>' + num + '</div>' +
+      '<div class="tile-lbl">' + esc(label) + '</div></div>';
+  }
+  function nbRow(label, valueHtml) {
+    return '<div class="nb-row"><span class="nb-lbl">' + esc(label) + '</span>' +
+      '<span class="nb-val tnum">' + valueHtml + '</span></div>';
   }
 
   /* ================= BOOT ================= */
