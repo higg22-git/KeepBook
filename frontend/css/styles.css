@@ -89,6 +89,7 @@ a:hover { color: var(--ink-blue-dk); }
 .nav { display: flex; flex-direction: column; gap: 4px; margin-left: 0; }
 .nav button {
   position: relative;
+  display: flex; align-items: center; gap: 10px;
   font-family: var(--font-sans);
   font-size: 13.5px; font-weight: 600;
   color: var(--muted);
@@ -97,6 +98,7 @@ a:hover { color: var(--ink-blue-dk); }
   padding: 9px 12px; border-radius: 8px;
   transition: background .15s, color .15s;
 }
+.nav-ico { flex: none; width: 17px; height: 17px; }
 .nav button:hover { background: #00000008; color: var(--ink); }
 .nav button.active { color: var(--ink-blue); background: #2f5fd014; }
 /* bookmark-ribbon left edge on the active row */
