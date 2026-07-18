@@ -521,8 +521,13 @@
       // footer
       right += '<div class="detail-foot">';
       if (confirmed) {
-        right += '<div style="display:flex;align-items:center;gap:8px;color:var(--ink-blue);font-weight:600;font-size:14px">' +
+        // Confirmed message + a quiet, non-destructive Re-open control stacked
+        // beneath it (foot-left is a column). Re-open reads calmer than Discard:
+        // it hovers to the ink-blue accent, never the red pen.
+        right += '<div class="foot-left">' +
+          '<div style="display:flex;align-items:center;gap:8px;color:var(--ink-blue);font-weight:600;font-size:14px">' +
           CHECK_SVG + ' Confirmed — checklist updated</div>' +
+          '<button class="link-reopen" id="reopen-btn">Re-open for correction</button></div>' +
           '<button class="btn-ghost btn-sm" id="to-dash">See it on the Dashboard →</button>';
       } else {
         right += '<div class="foot-left"><div class="privacy-line">Confirming files this into the client\'s checklist.</div>' +
@@ -541,6 +546,7 @@
 
       var cb = $("confirm-btn"); if (cb) cb.onclick = function () { doConfirm(doc); };
       var td = $("to-dash"); if (td) td.onclick = function () { show("dashboard"); };
+      var rb = $("reopen-btn"); if (rb) rb.onclick = function () { doUnconfirm(doc); };
       var db = $("discard-btn"); if (db) db.onclick = function () { doDelete(doc); };
       // Identity is an affirmative act: keep Confirm blocked (with a reason) until
       // the reviewer has restated the client. Re-evaluate on every identity edit.
@@ -802,6 +808,25 @@
       api.getClients().then(function (cs) { state.clients = cs; renderReview(); },
                            function () { renderReview(); });
     }).catch(function (e) { toast("Discard failed: " + e.message); });
+  }
+
+  // Re-open a confirmed doc for correction (inverse of confirm). The doc returns
+  // to the review queue as "needs review" and the detail re-renders editable with
+  // its prior values + corrections intact; the checklist item un-checks
+  // count-aware server-side.
+  function doUnconfirm(doc) {
+    api.unconfirm(doc.id).then(function (updated) {
+      toast("Re-opened for correction");
+      // Clear the one-shot confirm animation flag so the reopened doc renders in
+      // its editable state, not the settled strike-through.
+      delete state.justConfirmed[doc.client_id + "|" + doc.doc_type];
+      state.selectedDoc = updated.id;  // keep it selected; now "extracted" => needs review
+      // Refresh cached clients so the Dashboard checklist reflects the un-check,
+      // then re-render Review (which re-renders the detail editable) + the badge.
+      api.getClients().then(function (cs) { state.clients = cs; renderReview(); },
+                           function () { renderReview(); });
+      refreshNavBadge();
+    }).catch(function (e) { toast("Re-open failed: " + e.message); });
   }
 
   /* ================= CHECKLIST DASHBOARD ================= */

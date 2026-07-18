@@ -64,6 +64,9 @@
       deleteDocument: function (id) {
         return j("/documents/" + id, { method: "DELETE" });
       },
+      unconfirm: function (id) {
+        return j("/documents/" + id + "/unconfirm", { method: "POST" });
+      },
       getTimeline: function (hours) { return j("/stats/timeline?hours=" + (hours || 24)); },
       getRuns: function (limit) { return j("/runs?limit=" + (limit || 20)); }
     };
@@ -395,6 +398,36 @@
           }
           persist();
           return { deleted: id };
+        });
+      },
+
+      // Re-open a confirmed doc (inverse of confirm). Flips status back to
+      // "extracted" preserving doc_type/client_id/fields/corrections, then
+      // un-checks the client's checklist item ONLY if no other confirmed doc of
+      // that type remains (count-aware — mirrors the backend + delete path).
+      unconfirm: function (id) {
+        return ready().then(function () {
+          var d = state.documents.filter(function (x) { return x.id === id; })[0];
+          if (!d) return Promise.reject(new Error("no doc " + id));
+          if (d.status !== "confirmed") {
+            return Promise.reject(new Error("document " + id + " is not confirmed"));
+          }
+          var clientId = d.client_id;
+          var docType = d.doc_type;
+          d.status = "extracted";  // fields + corrections left untouched
+          if (clientId && docType && docType !== "UNRECOGNIZED") {
+            var c = state.clients.filter(function (x) { return x.id === clientId; })[0];
+            if (c && c.received_docs.indexOf(docType) >= 0) {
+              var stillHave = state.documents.some(function (x) {
+                return x.client_id === clientId && x.doc_type === docType && x.status === "confirmed";
+              });
+              if (!stillHave) {
+                c.received_docs = c.received_docs.filter(function (t) { return t !== docType; });
+              }
+            }
+          }
+          persist();
+          return clone(d);
         });
       },
 
