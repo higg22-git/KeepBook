@@ -1047,7 +1047,7 @@
         var animate = state.justConfirmed[c.id + "|" + t];
         var m = meta[t] || {};
         var sub = "Received" + (m.date ? " " + m.date : "") + (m.corr ? " · " + m.corr + " correction" + (m.corr > 1 ? "s" : "") : "");
-        return '<div class="check-row' + (animate ? " row-settle" : "") + '">' +
+        return '<div class="check-row done' + (animate ? " row-settle" : "") + '">' +
           '<span class="check-box done">' + (animate ? checkSvgAnimated() : CHECK_SVG) + '</span>' +
           '<div class="grow"><div class="c-label">' + esc(t) + '</div><div class="c-sub">' + esc(sub) + '</div></div></div>';
       }

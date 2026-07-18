@@ -507,6 +507,14 @@ main:has(#view-dashboard.active) { max-width: 1320px; }
 .check-row .c-label { font-size: 14.5px; font-weight: 600; }
 .check-row .c-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
 .check-row.missing .c-label { color: var(--ink); }
+/* Received items read as crossed off the paper checklist: ink check + a faint
+   strike on the label. The date subline stays unstruck and readable. */
+.check-row.done .c-label {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+  text-decoration-thickness: 1.5px;
+}
 .check-row.missing .c-sub { color: #8a6d00; font-weight: 600; }
 .check-row.pending .c-label,
 .check-row.pending .c-sub { color: var(--muted); }
