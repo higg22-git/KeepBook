@@ -5,7 +5,13 @@ Hybrid structure per docs/USER-JOURNEY.md: 30s story cold-open → feature tour 
 ## Pre-demo checklist (T53)
 
 - [ ] Backend + frontend running; one warm inference completed < 5 min before slot
-- [ ] Demo folder staged on Desktop: 6 docs — mix of clean + phone-photo variants + 1 receipt (the UNRECOGNIZED plant) + 1 doc known to produce a wrong field (the correction plant — pick from eval results)
+- [x] Demo folder staged: `~/Desktop/keepbook-demo/` — 6 docs picked from eval per-doc results (results_final_e4b.json):
+  - `w2_clean_02.png` — 5/5 fields correct → the "fifteen seconds" clean-confirm beat (pre-verified per IMPROVEMENTS #8)
+  - `1099int_clean_01.png` — 3/3 correct
+  - `w2_photo_01.png` — **money correction plant**: reads box2 fed withholding `6,410.79` for true `10410.79` — the script's "read the wrong box" line, verbatim
+  - `1098_clean_01.png` — **name correction plant + careful-mode flip beat**: lender reads `Coppell Bank` for `Copperline Bank` (consistent across 3 variants); this is the exact doc REGION_PASS fixes if you do the live flip
+  - `1099int_photo_01.png` — 2/3 + 1 honestly-flagged miss (shows the low-confidence flag)
+  - `receipt_01.png` — the UNRECOGNIZED plant
 - [ ] Seed state loaded: Ruth Okafor (one confirm from complete), Marcus Whitfield (missing 1099-INT), Chen partnership (missing K-1 + 1098)
 - [ ] Fallback restore command sitting in a ready terminal (T43)
 - [ ] Wi-Fi OFF if T40 passed with it off — say so out loud in the demo
