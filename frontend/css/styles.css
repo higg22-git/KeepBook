@@ -474,6 +474,11 @@ main:has(#view-dashboard.active) { max-width: 1320px; }
   transition: background .15s, transform .15s;
 }
 .fab .fab-plus { font-size: 24px; line-height: 1; font-weight: 600; }
+/* measured-value tooltips: dotted underline cues that a definition is a hover away */
+.tile[title] .tile-lbl, .nb-row[title] .nb-lbl, .stat[title] .lbl,
+.section-label[title] {
+  text-decoration: underline dotted var(--faint); text-underline-offset: 3px; cursor: help;
+}
 .fab:hover { background: var(--ink-blue-dk); transform: translateY(-1px); }
 .client-card .card-pad { padding: 22px 26px 24px; }
 .client-name { font-family: var(--font-hand); font-size: 34px; font-weight: 600; line-height: 1; }

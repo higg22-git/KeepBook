@@ -957,7 +957,7 @@
     var badge = complete
       ? '<span class="client-badge-complete">all in ✓</span>'
       : '';
-    var frac = '<span class="progress-frac tnum' + (complete ? " done" : "") + '">' + haveCount + '/' + total + '</span>';
+    var frac = '<span class="progress-frac tnum' + (complete ? " done" : "") + '" title="Documents received and confirmed, out of the ' + total + ' this client is expected to send.">' + haveCount + '/' + total + '</span>';
 
     return '<div class="card client-card"><div class="card-pad">' +
       '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">' +
@@ -975,10 +975,10 @@
     var rate = (s.correction_rate * 100).toFixed(1) + "%";
     $("stats-line").innerHTML =
       '<div class="stats-bar">' +
-      '<div class="stat"><span class="num tnum">' + s.fields_extracted + '</span><span class="lbl">fields extracted</span></div>' +
-      '<div class="stat"><span class="num tnum">' + s.fields_corrected + '</span><span class="lbl">fields corrected</span></div>' +
-      '<div class="stat"><span class="num rate tnum">' + rate + '</span><span class="lbl">correction rate</span></div>' +
-      (lastIntake ? '<span class="stats-note">last intake ' + esc(lastIntake) + '</span>' : '') +
+      '<div class="stat" title="Every field value the model has extracted across all processed documents."><span class="num tnum">' + s.fields_extracted + '</span><span class="lbl">fields extracted</span></div>' +
+      '<div class="stat" title="Fields where a reviewer changed the model\'s value before confirming."><span class="num tnum">' + s.fields_corrected + '</span><span class="lbl">fields corrected</span></div>' +
+      '<div class="stat" title="Corrected fields divided by extracted fields. The live accuracy meter, measured on your real documents."><span class="num rate tnum">' + rate + '</span><span class="lbl">correction rate</span></div>' +
+      (lastIntake ? '<span class="stats-note" title="When the most recent document arrived.">last intake ' + esc(lastIntake) + '</span>' : '') +
       '</div>';
   }
 
@@ -998,10 +998,13 @@
 
       // headline tiles (T33: docs processed, first-try classification %, correction rate, latency)
       html += '<div class="tiles">' +
-        tile(tt.docs_processed, "docs processed", "") +
-        tile(pct0(tt.first_try_type_acc), "classified right first try", "blue") +
-        tile(pct(tt.correction_rate), "correction rate (red pen)", "red") +
-        '<div class="tile"><div class="tile-num tnum">' + tt.median_latency_s + 's</div>' +
+        tile(tt.docs_processed, "docs processed", "",
+          "Documents that finished the pipeline in the last 24 hours — classified and extracted, or honestly marked unrecognized.") +
+        tile(pct0(tt.first_try_type_acc), "classified right first try", "blue",
+          "Share of documents whose first automatic classification matched the type a human ultimately confirmed. Manual reclassifications count against it.") +
+        tile(pct(tt.correction_rate), "correction rate (red pen)", "red",
+          "Corrected fields ÷ extracted fields, last 24 hours. The live accuracy meter — measured on your real documents, not a benchmark.") +
+        '<div class="tile" title="Seconds from intake to extraction, per document. Median is the typical case; p95 is the slow tail."><div class="tile-num tnum">' + tt.median_latency_s + 's</div>' +
         '<div class="tile-lbl">median · p95 ' + tt.p95_latency_s + 's</div></div>' +
         '</div>';
 
@@ -1026,7 +1029,7 @@
           (b.corrections ? ", " + b.corrections + " correction" + (b.corrections === 1 ? "" : "s") : "") + '"></div>';
       }).join("");
       html += '<div class="nerd-block">' +
-        '<div class="nb-head"><span class="section-label" style="margin:0">Docs per hour</span>' +
+        '<div class="nb-head"><span class="section-label" style="margin:0" title="Documents processed per hour over the last 24. Hover a bar for its hour\'s count.">Docs per hour</span>' +
         '<span class="nb-hint">now ←</span></div>' +
         '<div class="bar-strip">' + bars + '</div>' +
         '<div class="bar-axis"><span>24h ago</span><span>12h</span><span>now</span></div></div>';
@@ -1036,15 +1039,22 @@
       var cats = tt.corrections_by_category;
       html += '<div class="nerd-cols">' +
         '<div class="nerd-block"><div class="section-label" style="margin-top:0">Extraction</div>' +
-        nbRow("Fields extracted", '<span>' + tt.fields_extracted + '</span>') +
-        nbRow("Flagged low-confidence", '<span class="hl-chip">' + tt.fields_low_confidence + ' · ' + lowPct + '</span>') +
-        nbRow("Corrected by a reviewer", '<span style="color:var(--red)">' + tt.fields_corrected + ' · ' + pct(tt.correction_rate) + '</span>') +
+        nbRow("Fields extracted", '<span>' + tt.fields_extracted + '</span>',
+          "Every field value the model returned across processed documents, last 24 hours.") +
+        nbRow("Flagged low-confidence", '<span class="hl-chip">' + tt.fields_low_confidence + ' · ' + lowPct + '</span>',
+          "Fields a deterministic check flagged for closer review — empty values, format oddities, handwritten documents, cross-field mismatches. Never a made-up probability.") +
+        nbRow("Corrected by a reviewer", '<span style="color:var(--red)">' + tt.fields_corrected + ' · ' + pct(tt.correction_rate) + '</span>',
+          "Fields where the human changed the model's value at confirm time. The red pen.") +
         '</div>' +
-        '<div class="nerd-block"><div class="section-label" style="margin-top:0">Corrections by field</div>' +
-        nbRow("Dollar amounts", '<span>' + cats.money + '</span>') +
-        nbRow("TIN / SSN digits", '<span>' + cats.tin_ssn + '</span>') +
-        nbRow("Payer / employer names", '<span>' + cats.names + '</span>') +
-        nbRow("Document type (reclassified)", '<span>' + cats.doc_type + '</span>') +
+        '<div class="nerd-block"><div class="section-label" style="margin-top:0" title="Where the red pen lands: reviewer corrections grouped by what kind of field was wrong.">Corrections by field</div>' +
+        nbRow("Dollar amounts", '<span>' + cats.money + '</span>',
+          "Corrections to money fields — wages, withholding, interest, mortgage interest.") +
+        nbRow("TIN / SSN digits", '<span>' + cats.tin_ssn + '</span>',
+          "Corrections to SSN, TIN, or EIN digits — the highest-stakes field class.") +
+        nbRow("Payer / employer names", '<span>' + cats.names + '</span>',
+          "Corrections to names of people, employers, payers, lenders, or partnerships.") +
+        nbRow("Document type (reclassified)", '<span>' + cats.doc_type + '</span>',
+          "Documents a reviewer moved to a different type than the model's classification.") +
         '</div></div>';
 
       html += '<div class="nerd-foot">' +
@@ -1159,13 +1169,15 @@
     });
   }
 
-  function tile(num, label, tone) {
+  // tip: plain-language definition of the measure, rendered as a native title
+  // tooltip (zero-risk, works everywhere; the dotted label underline is the cue).
+  function tile(num, label, tone, tip) {
     var cls = tone === "blue" ? " style=\"color:var(--ink-blue)\"" : tone === "red" ? " style=\"color:var(--red)\"" : "";
-    return '<div class="tile"><div class="tile-num tnum"' + cls + '>' + num + '</div>' +
+    return '<div class="tile"' + (tip ? ' title="' + esc(tip) + '"' : '') + '><div class="tile-num tnum"' + cls + '>' + num + '</div>' +
       '<div class="tile-lbl">' + esc(label) + '</div></div>';
   }
-  function nbRow(label, valueHtml) {
-    return '<div class="nb-row"><span class="nb-lbl">' + esc(label) + '</span>' +
+  function nbRow(label, valueHtml, tip) {
+    return '<div class="nb-row"' + (tip ? ' title="' + esc(tip) + '"' : '') + '><span class="nb-lbl">' + esc(label) + '</span>' +
       '<span class="nb-val tnum">' + valueHtml + '</span></div>';
   }
 
