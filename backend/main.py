@@ -561,6 +561,30 @@ async def get_document_image(doc_id: str):
     return FileResponse(path)
 
 
+def _uncheck_client_item_locked(client_id, doc_type) -> None:
+    """Count-aware checklist un-check. Caller holds STATE_LOCK and has ALREADY
+    removed the doc (delete) or flipped it off "confirmed" (unconfirm), so this
+    doc is not counted here. Pulls doc_type from the client's received_docs only
+    when NO other confirmed doc of that type remains for the client — the single
+    source of truth for the count-aware rule, shared by delete + unconfirm.
+    """
+    if not (client_id and doc_type and doc_type != pipeline.UNRECOGNIZED):
+        return
+    client = STATE["clients"].get(client_id)
+    if client is None or doc_type not in client.get("received_docs", []):
+        return
+    still_have = any(
+        d.get("client_id") == client_id
+        and d.get("doc_type") == doc_type
+        and d.get("status") == "confirmed"
+        for d in STATE["documents"].values()
+    )
+    if not still_have:
+        client["received_docs"] = [
+            t for t in client["received_docs"] if t != doc_type
+        ]
+
+
 @app.post("/documents/{doc_id}/confirm")
 async def confirm_document(doc_id: str, request: Request):
     body = await request.json()
@@ -673,25 +697,9 @@ async def delete_document(doc_id: str):
             QUEUE.remove(doc_id)
 
         # Un-check the client's checklist item only if this was the last confirmed
-        # document of its type for that client (count-aware).
-        if (
-            was_confirmed
-            and client_id
-            and doc_type
-            and doc_type != pipeline.UNRECOGNIZED
-        ):
-            client = STATE["clients"].get(client_id)
-            if client is not None and doc_type in client.get("received_docs", []):
-                still_have = any(
-                    d.get("client_id") == client_id
-                    and d.get("doc_type") == doc_type
-                    and d.get("status") == "confirmed"
-                    for d in STATE["documents"].values()
-                )
-                if not still_have:
-                    client["received_docs"] = [
-                        t for t in client["received_docs"] if t != doc_type
-                    ]
+        # document of its type for that client (count-aware). Shared with unconfirm.
+        if was_confirmed:
+            _uncheck_client_item_locked(client_id, doc_type)
 
         _persist_locked()
 
@@ -705,6 +713,43 @@ async def delete_document(doc_id: str):
 
     _append_event({"type": "deleted", "doc_id": doc_id, "doc_type": doc_type})
     return {"deleted": doc_id}
+
+
+@app.post("/documents/{doc_id}/unconfirm")
+async def unconfirm_document(doc_id: str):
+    """Re-open a confirmed document for correction (the inverse of /confirm).
+
+    Only valid on a "confirmed" doc (409 otherwise). Flips status back to
+    "extracted" while PRESERVING doc_type, client_id, page_number, and every
+    field exactly as the confirmed state had them — including corrections
+    (corrected: true + original_value) — so re-confirm is one click and prior
+    edits aren't lost. Un-checks the client's checklist item with the same
+    count-aware rule as delete (a checklist item survives while another confirmed
+    doc of that type remains). Appends an "unconfirmed" event; persists atomically.
+    """
+    with STATE_LOCK:
+        doc = STATE["documents"].get(doc_id)
+        if doc is None:
+            raise HTTPException(404, f"no document {doc_id}")
+        if doc.get("status") != "confirmed":
+            raise HTTPException(
+                409, f"document {doc_id} is not confirmed (status: {doc.get('status')})"
+            )
+
+        client_id = doc.get("client_id")
+        doc_type = doc.get("doc_type")
+
+        # Flip off "confirmed" FIRST so the count-aware un-check does not count
+        # this doc as a remaining confirmed doc of its type. Fields/corrections/
+        # doc_type/client_id are left untouched — a re-confirm is one click.
+        doc["status"] = "extracted"
+        _uncheck_client_item_locked(client_id, doc_type)
+
+        _persist_locked()
+        final = json.loads(json.dumps(doc))  # snapshot for use outside the lock
+
+    _append_event({"type": "unconfirmed", "doc_id": doc_id, "doc_type": doc_type})
+    return final
 
 
 # ---------------------------- Clients --------------------------------------
