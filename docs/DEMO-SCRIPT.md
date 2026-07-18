@@ -57,6 +57,12 @@ Hybrid structure per docs/USER-JOURNEY.md: 30s story cold-open → feature tour 
 
 > "Small firms handling strangers' SSNs were never going to get a data processing agreement from a chat tab. KeepBook doesn't make cloud AI safer — it removes the cloud entirely. Every byte of every client's tax life stayed on this MacBook. That's KeepBook. Thanks."
 
+**Optional careful-mode beat** (rehearse before deciding — it costs ~40s): the flag is read from the process env, so the flip is a server restart (state persists, model stays warm in Ollama, ~2s):
+```
+pkill -f "uvicorn main:app"; cd backend && REGION_PASS=1 nohup .venv/bin/python -m uvicorn main:app --port 8100 > uvicorn.log 2>&1 & cd ..
+```
+Then re-drop `1098_clean_01.png` → the lender that read "Coppell Bank" in fast mode comes back "Copperline Bank" (~28s careful). Line: "Same document, careful mode — watch the wrong bank name fix itself. Ten more seconds a document, eight silent wrongs instead of twenty-one. We made that a mode, not a default, and we can tell you exactly why."
+
 **If live processing stalls:** run the fallback restore [T43], say "let me jump to a session from this morning," continue at 1:00. Do not debug on stage.
 
 ---
