@@ -60,6 +60,24 @@ def _maybe_preprocess(image_b64: str) -> str:
 DOC_TYPES = ["W-2", "1099-NEC", "1099-INT", "1099-MISC", "K-1", "1098"]
 UNRECOGNIZED = "UNRECOGNIZED"
 
+# Classify-only doc types (T65): the model classifies + the human assigns and
+# confirms them, but NO field extraction runs (extract: false). One model call,
+# not two — cheaper AND immune to the silent-wrong failure class, because a
+# document with zero extracted fields cannot carry a well-formed-but-wrong value.
+# They still satisfy checklist items once confirmed (checklist match is by
+# doc_type string, so a confirmed "1099-DIV" checks off an expected "1099-DIV").
+# These deliberately have NO FIELD_SCHEMA entry; run_pipeline short-circuits
+# before extract_fields ever indexes FIELD_SCHEMA[doc_type].
+CLASSIFY_ONLY_TYPES = [
+    "1099-DIV", "1099-B", "1099-R", "1099-G",
+    "1098-T", "1098-E", "1095-A",
+    "property tax statement", "charitable receipt", "brokerage statement",
+    "W-9", "engagement letter",
+]
+CLASSIFY_ONLY_SET = set(CLASSIFY_ONLY_TYPES)
+# Full classification enum shown to the model (extract types first).
+ALL_DOC_TYPES = DOC_TYPES + CLASSIFY_ONLY_TYPES
+
 FIELD_SCHEMA = {
     "W-2": ["employee_name", "ssn", "employer", "box1_wages", "box2_fed_withheld"],
     "1099-NEC": ["payer", "recipient_name", "recipient_tin", "box1_nonemployee_comp"],
@@ -156,17 +174,19 @@ FIELD_DESCRIPTIONS = {
 # Prompts
 # ---------------------------------------------------------------------------
 def build_classify_prompt() -> str:
-    types = ", ".join(f'"{t}"' for t in DOC_TYPES)
+    types = ", ".join(f'"{t}"' for t in ALL_DOC_TYPES)
     return (
         "You are a US tax-document intake classifier. Look at this document image "
-        "and decide which single IRS form it is.\n"
+        "and decide which single tax document it is.\n"
         "Return STRICT JSON only, no prose, no markdown:\n"
         '{"doc_type": "<TYPE>", "handwritten": true}\n'
         f"where <TYPE> is EXACTLY one of: {types}, or "
-        f'"{UNRECOGNIZED}" if it is not one of those forms (for example a '
-        "receipt, a letter, or any non-tax document).\n"
-        "Do not guess a tax form when the document is clearly not one — return "
-        f'"{UNRECOGNIZED}" instead.\n'
+        f'"{UNRECOGNIZED}" if it is not clearly one of those documents (for '
+        "example a pay stub, a bank statement, a utility bill, or any document not "
+        "on the list above).\n"
+        "Only choose a type when the document clearly IS that document. When you "
+        f'are unsure, return "{UNRECOGNIZED}" — never force an unrelated document '
+        "into a type just because it is the closest match.\n"
         'Set "handwritten" to true if the values filled into the form (the names, '
         "numbers and dollar amounts) are written by hand in pen or pencil, or false "
         "if those entries are typed or machine-printed. Judge ONLY the filled-in "
@@ -346,19 +366,48 @@ def normalize_doc_type(raw) -> str:
     t = raw.strip().lower()
     if not t:
         return UNRECOGNIZED
-    # Order matters: check the more specific 1099 variants first.
+    # Order matters: check the more specific 1099 variants first. The word-based
+    # subtypes (nec/int/misc/div) are checked before the single-letter ones
+    # (b/r/g), which are matched adjacent to "1099" so they can't false-fire.
     if "1099" in t and "nec" in t:
         return "1099-NEC"
     if "1099" in t and "int" in t:
         return "1099-INT"
     if "1099" in t and "misc" in t:
         return "1099-MISC"
+    if "1099" in t and "div" in t:
+        return "1099-DIV"
+    if re.search(r"1099[\s\-]?r\b", t):
+        return "1099-R"
+    if re.search(r"1099[\s\-]?g\b", t):
+        return "1099-G"
+    if re.search(r"1099[\s\-]?b\b", t):
+        return "1099-B"
+    # 1098 family: -T (tuition) / -E (student loan) before the bare 1098 (mortgage).
+    if re.search(r"1098[\s\-]?t\b", t) or "tuition" in t:
+        return "1098-T"
+    if re.search(r"1098[\s\-]?e\b", t) or "student loan" in t:
+        return "1098-E"
     if "1098" in t:
         return "1098"
+    # 1095 (Health Insurance Marketplace) — only -A is in the enum.
+    if "1095" in t:
+        return "1095-A"
     if re.search(r"\bw[\s\-]?2\b", t) or "wage and tax" in t:
         return "W-2"
+    if re.search(r"\bw[\s\-]?9\b", t) or "request for taxpayer identification" in t:
+        return "W-9"
     if re.search(r"\bk[\s\-]?1\b", t) or "schedule k" in t:
         return "K-1"
+    # Non-form classify-only documents (no IRS form number to key on).
+    if "property tax" in t:
+        return "property tax statement"
+    if "charitable" in t or "donation receipt" in t or "donation acknowledg" in t:
+        return "charitable receipt"
+    if "brokerage" in t or "consolidated 1099" in t:
+        return "brokerage statement"
+    if "engagement" in t:
+        return "engagement letter"
     if "unrecogni" in t or "unknown" in t or "not a tax" in t:
         return UNRECOGNIZED
     return UNRECOGNIZED
@@ -596,7 +645,7 @@ def run_pipeline(image_b64: str) -> dict:
       {
         "status": "extracted" | "unrecognized",
         "doc_type": <canonical type or "UNRECOGNIZED">,
-        "fields": {key: value_str},   # plain values; {} when unrecognized
+        "fields": {key: value_str},   # plain values; {} when unrecognized or classify-only
         "classify_raw": str,
         "extract_raw": str | None,
         "retried": bool,   # either model call needed a retry (low_confidence signal)
@@ -629,6 +678,27 @@ def run_pipeline(image_b64: str) -> dict:
             "hand_ensemble": None,
             "disputed": {},
             "low_confidence": {},
+        }
+    if doc_type in CLASSIFY_ONLY_SET:
+        # Classify-only type (T65): extract: false. No extraction call is made,
+        # so this document lands "extracted" with zero fields, awaiting client
+        # assignment + human confirm. With no extracted values there is nothing
+        # to be silently wrong about — the failure class is designed out.
+        return {
+            "status": "extracted",
+            "doc_type": doc_type,
+            "fields": {},
+            "classify_raw": classify_raw,
+            "extract_raw": None,
+            "retried": c_retried,
+            "re_asks": 0,
+            "region_calls": 0,
+            "region_replacements": [],
+            "handwritten": handwritten,
+            "hand_ensemble": None,
+            "disputed": {},
+            "low_confidence": {},
+            "classify_only": True,
         }
     fields, extract_raw, e_retried = extract_fields(image_b64, doc_type)
     if fields is None:

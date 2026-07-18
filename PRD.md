@@ -53,6 +53,8 @@ The product is small on purpose: point a camera at a stack of documents, watch t
 **Extended set — same document family/structure, not in tonight's tested eval set, reasonable to expect similar behavior but UNVERIFIED:**
 1099-DIV (Dividends), 1099-B (Broker/Investment Transactions), 1099-R (Retirement Distributions), 1099-G (Government Payments), 1098-T (Tuition Statement), 1098-E (Student Loan Interest).
 
+**Classify-only set (T65, `extract: false`):** 1099-DIV/-B/-R/-G, 1098-T/-E, 1095-A, property tax statement, charitable receipt, brokerage statement, W-9, engagement letter. These are classified + client-assigned + human-confirmed with **zero field extraction** — one model call, not two, so the silent-wrong failure class cannot exist for them. They still satisfy checklist items once confirmed (matching is by doc_type string). Risk register (recorded): larger enum = more force-fit surface (mitigation: UNRECOGNIZED discipline unchanged + mandatory confirm); new types eval-unverified (mitigation: small classify-only eval bucket, labeled UNVERIFIED until run — see `eval/CLASSIFY_ONLY.md`).
+
 **Explicit design rule:** a document that doesn't match a recognized type is classified as **"Unrecognized — needs manual classification,"** never force-fit into the nearest known category. Confidently mislabeling an unfamiliar document is worse than honestly admitting the system doesn't know what it's looking at — this is the same lesson as the `box2_fed_withheld` failure in §9: a wrong answer that looks right is the dangerous case, not a system that says "I'm not sure."
 
 ---
