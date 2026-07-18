@@ -172,6 +172,7 @@ def _worker_loop() -> None:
             error = str(exc)
         latency = round(time.time() - t0, 2)
 
+        low_conf_count = 0
         with STATE_LOCK:
             doc = STATE["documents"].get(doc_id)
             if doc is not None:
@@ -185,6 +186,9 @@ def _worker_loop() -> None:
                     doc["doc_type"] = result["doc_type"]
                     doc["fields"] = _wrap_fields(result["fields"], result.get("retried"))
                     doc.pop("error", None)
+                low_conf_count = sum(
+                    1 for f in doc["fields"].values() if f.get("low_confidence")
+                )
             PROCESSING = None
             _persist_locked()
 
@@ -199,6 +203,7 @@ def _worker_loop() -> None:
                 "doc_type": doc["doc_type"],
                 "latency_s": latency,
                 "fields_total": fields_total,
+                "fields_low_confidence": low_conf_count,
                 "retried": retried,
             })
 
@@ -489,6 +494,7 @@ async def stats_timeline(hours: int = 24):
 
     docs_processed = len(processed)
     fields_extracted = sum(int(e.get("fields_total", 0)) for e in processed)
+    fields_low_confidence = sum(int(e.get("fields_low_confidence", 0)) for e in processed)
     fields_corrected = sum(int(e.get("fields_corrected", 0)) for e in confirms)
     manual_changes = sum(1 for e in confirms if e.get("manual_type_change"))
     latencies = sorted(
@@ -516,6 +522,7 @@ async def stats_timeline(hours: int = 24):
     totals = {
         "docs_processed": docs_processed,
         "fields_extracted": fields_extracted,
+        "fields_low_confidence": fields_low_confidence,
         "fields_corrected": fields_corrected,
         "correction_rate": round(fields_corrected / fields_extracted, 4)
         if fields_extracted
