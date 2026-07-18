@@ -1,0 +1,20 @@
+[
+  {
+    "id": "client_okafor",
+    "name": "Okafor, Ruth",
+    "expected_docs": ["W-2", "1099-INT", "1098"],
+    "received_docs": ["W-2", "1098"]
+  },
+  {
+    "id": "client_whitfield",
+    "name": "Whitfield, Marcus",
+    "expected_docs": ["W-2", "1099-INT"],
+    "received_docs": []
+  },
+  {
+    "id": "client_chen",
+    "name": "Chen Partnership",
+    "expected_docs": ["1099-NEC", "K-1", "1098"],
+    "received_docs": ["1099-NEC"]
+  }
+]
