@@ -79,10 +79,10 @@ Rule: a checklist item is satisfied only by a **confirmed** document. Unrecogniz
 
 ## Event log (stretch tier — Stats for Nerds)
 
-The backend appends one line per pipeline event to `backend/events.jsonl` (gitignored, append-only — this is the "stringent log"; the UI shows only a rolling window):
+The backend appends one line per pipeline event to `backend/events.jsonl` (gitignored, append-only — this is the "stringent log"; the UI shows only a rolling window). Per extraction, the exact model I/O (every call's prompt + raw response, retries included) is written to `backend/raws/{doc_id}.json` (gitignored), referenced from the event as `raw_ref`:
 
 ```jsonc
-{"ts": "2026-07-18T09:14:02Z", "type": "extracted", "doc_id": "doc_007", "doc_type": "W-2", "latency_s": 19.2, "fields_total": 5, "fields_low_confidence": 1, "retried": false}
+{"ts": "2026-07-18T09:14:02Z", "type": "extracted", "doc_id": "doc_007", "doc_type": "W-2", "latency_s": 19.2, "fields_total": 5, "fields_low_confidence": 1, "retried": false, "raw_ref": "raws/doc_007.json"}
 {"ts": "2026-07-18T09:15:40Z", "type": "confirmed", "doc_id": "doc_007", "doc_type": "W-2", "fields_corrected": 1, "corrected_keys": ["box2_fed_withheld"], "manual_type_change": false}
 ```
 
@@ -98,6 +98,7 @@ The backend appends one line per pipeline event to `backend/events.jsonl` (gitig
     "fields_low_confidence": 17,
     "first_try_type_acc": 0.94,          // confirmed doc_type == extracted doc_type
     "median_latency_s": 19.2,
+    "p95_latency_s": 24.1,               // nearest-rank p95 over the same events
     "corrections_by_category": {"money": 4, "tin_ssn": 2, "names": 2, "doc_type": 1}
   }
 }

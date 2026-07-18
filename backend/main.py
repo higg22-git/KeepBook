@@ -9,6 +9,7 @@ Run:  uvicorn main:app --port 8100      (from backend/, venv active)
 
 import base64
 import json
+import math
 import os
 import re
 import threading
@@ -142,6 +143,28 @@ def _wrap_fields(plain: dict, retried: bool = False) -> dict:
     return out
 
 
+def _write_raws(doc_id: str, calls: list, doc: dict) -> str:
+    """Persist the exact per-call model I/O for one document (auditability).
+
+    Returns the event-facing reference path (relative to backend/).
+    """
+    raws_dir = os.path.join(BASE_DIR, "raws")
+    os.makedirs(raws_dir, exist_ok=True)
+    rel = os.path.join("raws", f"{doc_id}.json")
+    record = {
+        "doc_id": doc_id,
+        "ts": _now_iso(),
+        "model_runtime": os.environ.get("MODEL_RUNTIME", "ollama"),
+        "model_name": os.environ.get("MODEL_NAME", "gemma4:e4b"),
+        "status": doc.get("status"),
+        "doc_type": doc.get("doc_type"),
+        "calls": calls,
+    }
+    with open(os.path.join(BASE_DIR, rel), "w", encoding="utf-8") as fh:
+        json.dump(record, fh, indent=2)
+    return rel
+
+
 # ---------------------------------------------------------------------------
 # Background worker — sequential, one document at a time.
 # ---------------------------------------------------------------------------
@@ -164,12 +187,32 @@ def _worker_loop() -> None:
         result = None
         error = None
         t0 = time.time()
+        # Raw-I/O capture: wrap the pipeline's bound model hook for the duration
+        # of this one document so every call's exact prompt + raw response is
+        # recorded (incl. retries). Worker is the only sequential model caller;
+        # the original binding (real adapter or a test fake) is restored in
+        # finally BEFORE the doc reaches a terminal status.
+        calls = []
+        orig_extract = pipeline.model_extract
+
+        def _capturing_extract(image_b64, prompt, *args, **kwargs):
+            try:
+                resp = orig_extract(image_b64, prompt, *args, **kwargs)
+            except Exception as exc:
+                calls.append({"seq": len(calls) + 1, "prompt": prompt, "error": str(exc)})
+                raise
+            calls.append({"seq": len(calls) + 1, "prompt": prompt, "response": resp})
+            return resp
+
+        pipeline.model_extract = _capturing_extract
         try:
             with open(img_path, "rb") as fh:
                 img_b64 = base64.b64encode(fh.read()).decode()
             result = pipeline.run_pipeline(img_b64)
         except Exception as exc:  # noqa: BLE001 - never let the worker die
             error = str(exc)
+        finally:
+            pipeline.model_extract = orig_extract
         latency = round(time.time() - t0, 2)
 
         low_conf_count = 0
@@ -194,6 +237,10 @@ def _worker_loop() -> None:
 
         # Event log (append-only; drives /stats/timeline).
         if doc is not None:
+            try:
+                raw_ref = _write_raws(doc_id, calls, doc)
+            except OSError:
+                raw_ref = None
             retried = bool(result.get("retried")) if result else False
             fields_total = len(result["fields"]) if result else 0
             ev_type = doc["status"] if doc["status"] in ("extracted", "unrecognized") else "extracted"
@@ -205,6 +252,7 @@ def _worker_loop() -> None:
                 "fields_total": fields_total,
                 "fields_low_confidence": low_conf_count,
                 "retried": retried,
+                "raw_ref": raw_ref,
             })
 
 
@@ -281,10 +329,15 @@ async def intake(request: Request):
         form = await request.form()
         # multi_items() keeps EVERY (key, value) pair — the built frontend sends
         # each file under a repeated "file" key (frontend/js/api.js), and
-        # form.values() would collapse them to one. Key-agnostic by design.
-        uploads = [v for _, v in form.multi_items() if isinstance(v, StarletteUploadFile)]
+        # form.values() would collapse them to one. Field name pinned to "file"
+        # per docs/API.md; other keys are rejected, not silently accepted.
+        uploads = [
+            v
+            for k, v in form.multi_items()
+            if k == "file" and isinstance(v, StarletteUploadFile)
+        ]
         if not uploads:
-            raise HTTPException(400, "no files in multipart body")
+            raise HTTPException(400, 'no files under multipart field "file"')
         with STATE_LOCK:
             for up in uploads:
                 data = await up.read()
@@ -480,20 +533,28 @@ async def stats_timeline(hours: int = 24):
     processed = [e for e in events if e.get("type") in ("extracted", "unrecognized")]
     confirms = [e for e in events if e.get("type") == "confirmed"]
 
-    # Hourly buckets (oldest first), only for hours with activity.
-    buckets = {}
+    # Hourly buckets: exactly `hours` zero-filled entries, one per hour, oldest
+    # first, ending at the current hour (contract "one per hour, oldest first").
+    now_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    start_hour = now_hour - timedelta(hours=hours - 1)
+    counts = {}  # absolute hour datetime -> {"docs": n, "corrections": n}
     for e in processed:
-        key = e["_dt"].strftime("%Y-%m-%dT%H")
-        buckets.setdefault(key, {"docs": 0, "corrections": 0})["docs"] += 1
+        key = e["_dt"].replace(minute=0, second=0, microsecond=0)
+        counts.setdefault(key, {"docs": 0, "corrections": 0})["docs"] += 1
     for e in confirms:
-        key = e["_dt"].strftime("%Y-%m-%dT%H")
-        buckets.setdefault(key, {"docs": 0, "corrections": 0})["corrections"] += int(
+        key = e["_dt"].replace(minute=0, second=0, microsecond=0)
+        counts.setdefault(key, {"docs": 0, "corrections": 0})["corrections"] += int(
             e.get("fields_corrected", 0)
         )
-    bucket_list = [
-        {"hour": k[11:13] + ":00", "docs": v["docs"], "corrections": v["corrections"]}
-        for k, v in sorted(buckets.items())
-    ]
+    bucket_list = []
+    for offset in range(hours):
+        hour_dt = start_hour + timedelta(hours=offset)
+        c = counts.get(hour_dt, {"docs": 0, "corrections": 0})
+        bucket_list.append({
+            "hour": hour_dt.strftime("%H:00"),
+            "docs": c["docs"],
+            "corrections": c["corrections"],
+        })
 
     docs_processed = len(processed)
     fields_extracted = sum(int(e.get("fields_total", 0)) for e in processed)
@@ -511,16 +572,20 @@ async def stats_timeline(hours: int = 24):
             if len(latencies) % 2
             else (latencies[mid - 1] + latencies[mid]) / 2
         )
+        # Nearest-rank p95 over the same sorted latencies.
+        p95_lat = latencies[min(len(latencies) - 1, math.ceil(0.95 * len(latencies)) - 1)]
     else:
         median_lat = 0
+        p95_lat = 0
 
-    by_cat = {}
+    # All four categories always present, zero-filled (contract).
+    by_cat = {"money": 0, "tin_ssn": 0, "names": 0, "doc_type": 0}
     for e in confirms:
         for key in e.get("corrected_keys", []) or []:
             cat = pipeline.correction_category(key)
             by_cat[cat] = by_cat.get(cat, 0) + 1
         if e.get("manual_type_change"):
-            by_cat["doc_type"] = by_cat.get("doc_type", 0) + 1
+            by_cat["doc_type"] += 1
 
     totals = {
         "docs_processed": docs_processed,
@@ -534,6 +599,7 @@ async def stats_timeline(hours: int = 24):
         if confirms
         else 0,
         "median_latency_s": round(median_lat, 2),
+        "p95_latency_s": round(p95_lat, 2),
         "corrections_by_category": by_cat,
     }
     return {"hours": hours, "buckets": bucket_list, "totals": totals}
