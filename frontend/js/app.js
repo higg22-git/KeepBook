@@ -645,6 +645,11 @@
       renderDetail(updated.id);
       // refresh the list so the confirmed doc drops out of "needs review"
       api.getDocuments().then(function (docs) {
+        // Refresh the "N awaiting review" op-notes here so they don't read one
+        // high until an unrelated re-render (the confirm just moved a doc out of
+        // the review queue). Same fresh docs we already fetched.
+        var opEl = $("review-op"); if (opEl) opEl.textContent = opSummary(docs);
+        var capEl = $("capture-op"); if (capEl) capEl.textContent = opSummary(docs);
         var needs = docs.filter(function (d) { return d.status === "extracted" || d.status === "unrecognized" || d.status === "error"; });
         var listEl = $("review-list");
         listEl.innerHTML = needs.length ? needs.map(function (d) {
