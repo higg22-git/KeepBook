@@ -8,3 +8,6 @@ node_modules/
 uploads/
 *.db
 .playwright-mcp/
+backend/state.json
+backend/state.json.tmp
+backend/events.jsonl

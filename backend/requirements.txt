@@ -1,4 +1,4 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
-ollama==0.4.7
+# Model calls use the stdlib (urllib) per docs/API.md — no model SDK needed.
