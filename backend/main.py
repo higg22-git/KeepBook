@@ -521,11 +521,11 @@ async def get_document_trace(doc_id: str):
 
     The observability money-shot: one click answers "what did the model see
     and say?" (IMPROVEMENTS #4). Returns the raws/<id>.json record verbatim.
+
+    Keyed on the raws file alone, NOT on state membership: /runs lists runs from
+    the event log, which outlives state swaps (demo seed/fallback restores), so a
+    run row must stay expandable even after its document left the current state.
     """
-    with STATE_LOCK:
-        doc = STATE["documents"].get(doc_id)
-        if doc is None:
-            raise HTTPException(404, f"no document {doc_id}")
     raws_path = os.path.join(BASE_DIR, "raws", f"{doc_id}.json")
     if not os.path.exists(raws_path):
         raise HTTPException(404, f"no trace for {doc_id}")
