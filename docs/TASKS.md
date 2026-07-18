@@ -87,9 +87,10 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
 
 ## Phase 3 — Frontend (owner V; target ~12:30 PM)
 
-- [ ] **T30 — Capture/Submit screen** (V)
+- [x] **T30 — Capture/Submit screen** (V)
   DoD: drag-and-drop posts files to `/intake`; queue progress polls `/queue`; paper/ink tokens per docs/design/DESIGN.md; "Processed on this Mac. Nothing is uploaded." visible.
   Verify: drop 2 testset images in a browser → both appear in `/documents` and progress shows.
+  CLOSED (~2:04 PM): the literal drag-drop gesture happened on the real stack — founder dragged the 6-doc demo folder at ~2:00 PM, all processed and rendered in Review (screenshot in transcript: 8 awaiting = his 6 + 2 seeded, "last intake 2:00 PM"). The "Processed on this Mac" copy line was deliberately superseded by T60 (founder direction, PRD §10 note). All other DoD halves verified earlier (see evidence below).
   Evidence: Frontend half verified in mock mode (`frontend/`, branch `agent/vin-overnight`) — dropped 2 files onto the zone → "Queued · 2 files" list → Process → `/queue` polling rendered "0 of 2" with progress bar → "2 documents ready", and both materialized into Review (doc_007 `1099-INT`, doc_008 `UNRECOGNIZED`, each with preview image). Paper/ink tokens + "Processed on this Mac. Nothing is uploaded." present; page load fires ZERO external network requests (all `localhost` + `blob:`, Caveat font from local `assets/caveat.woff2`). Awaiting backend for full DoD (real `/intake` round-trip). LIVE-STACK ADDENDUM (orchestrator ~01:40): real /intake verified via curl multipart (2 files, repeated `file` key) → processed → rendered in Review with images; box stays unchecked only because the literal browser drag-and-drop gesture on the real stack hasn't been performed — covered by T40's morning Wi-Fi-off run.
 
 - [x] **T31 — Bin Review & Correction screen** (V)

@@ -54,7 +54,8 @@ The rest of the hard parts were about holding discipline on a one-day clock. We 
 
 ---
 
-## DECIDED (~1:55 PM): Option A — Courier named, full record. Applied to docs/WRITEUP.md. GATED on the parallel session pushing PRD §8's full-run paragraph + eval/results_courier_*.json + model_runtime.py to origin BEFORE submitting; if the cutoff arrives first, flip the writeup's runtime line to the fallback wording below (kill test + subset only, "full-run record was still being committed at submission time").
+## DECIDED (~1:55 PM): Option A — Courier named, full record. Applied to docs/WRITEUP.md.
+## GATE CLEARED (~2:06 PM): bake-off commits pushed to origin (`9d4d805` + `102791c`) — PRD §8 full record + all results files are public. The fairness caveat is CLOSED: the matched-technique arm ran (`results_ollama_e4b_panscan.json`, Ollama+panscan 87/106 = 82.1% at 22.7s median, verified against the file) and Courier still wins both axes. Writeup + description numbers re-verified against both panscan JSONs. Submit-ready.
 
 ## Original open item (resolved above, kept for provenance)
 
