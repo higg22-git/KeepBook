@@ -200,6 +200,16 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: Chrome shows the install affordance; installed icon launches to the dashboard.
   Evidence (partial — orchestrator): manifest.json (standalone, start_url /#dashboard, paper theme colors) + icon-192/512 rendered from logo-mark.svg on a cream canvas, wired via <link rel=manifest> + apple-touch-icon + theme-color; `curl /manifest.json` → 200 application/json, icons 200 image/png; manifest parses. Commit pushed. REMAINING (Vin, 30s): open localhost:8100 in real Chrome → address-bar install icon → "Install" → verify dock icon launches standalone to Dashboard. Box stays unchecked until that click happens. Service worker deliberately NOT added pre-freeze (cache-invalidation risk on the demo tab outweighs the offline-shell nicety; the product already runs offline behind the local server).
 
+- [ ] **T69 — Client-list CSV import** (agent; POST-DEMO backlog — added Sat ~11:55)
+  DoD: the mirror of export.csv — POST /clients/import accepts a CSV (columns: name, expected_docs semicolon-separated; tolerant of the client-list exports practice tools produce), creates clients in bulk, dry-run preview in the UI before commit ("14 clients found, 2 duplicates skipped"), reachable near the Add Client flow. Story: onboarding a 60-client firm is one CSV, and the CSV-in/CSV-out symmetry completes the integration claim.
+  Verify: import a 10-row CSV → clients render with correct checklists; duplicates skipped, not doubled.
+  Evidence: _none_
+
+- [ ] **T70 — Watched intake folder** (agent; POST-DEMO backlog — added Sat ~11:55)
+  DoD: a designated ~/KeepBook Inbox/ folder watched by the backend (watchdog/fswatch); any image dropped there auto-ingests exactly like a drag-drop (same pipeline, same review gate). The on-device-native intake path: AirDrop from the phone lands a file, KeepBook eats it, no browser interaction. Risk note: needs dedup with the uploads dir + ignore non-images + never delete originals.
+  Verify: drop an image into the folder with the app closed in the browser → doc appears in Review on next open.
+  Evidence: _none_
+
 - [x] **T65 — Classify-only document types** (agent; MEDIUM, eval-gated)
   DoD: extend the type enum with classify-only types (`extract: false` in schema): 1099-DIV/-B/-R/-G, 1098-T/-E, 1095-A, property tax statement, charitable receipt, brokerage statement, W-9, engagement letter. These get classified + client-assigned + human-confirmed, zero field extraction — so the silent-wrong failure class cannot exist for them; they still satisfy checklist items. Risk register (recorded): larger enum = more force-fit surface (mitigation: UNRECOGNIZED discipline unchanged + mandatory confirm); new types eval-unverified (mitigation: small classify-only eval bucket, labeled UNVERIFIED until run).
   Verify: a classify-only doc classifies, assigns, confirms, and checks its checklist item; junk still lands UNRECOGNIZED; eval bucket run or explicitly deferred with the UNVERIFIED label.
