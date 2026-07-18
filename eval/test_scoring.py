@@ -113,3 +113,58 @@ def test_unrecognized_match_is_correct_with_zero_field_checks(
     assert summary["field_total"] == 0
     assert summary["silent_wrong_values"] == 0
 
+
+def test_classify_only_scores_doc_type_and_skips_field_scoring(
+    scoring, monkeypatch, tmp_path
+):
+    """A classify-only label (T65) is scored on doc_type only.
+
+    The label deliberately lists a field and the fake pipeline returns a WRONG
+    value for it. If field scoring were not skipped this would register a
+    silent-wrong; the skip is what makes the failure class impossible.
+    """
+    docs = tmp_path / "docs"
+    docs.mkdir()
+    (docs / "wnine.png").write_bytes(b"model-free fixture")
+    labels = tmp_path / "labels.json"
+    labels.write_text(
+        json.dumps(
+            {
+                "wnine.png": {
+                    "doc_type": "W-9",
+                    "classify_only": True,
+                    # present but must never be scored:
+                    "fields": {"should_not_be_scored": "correct-value"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "results.json"
+    fake_pipeline = SimpleNamespace(
+        run_pipeline=lambda _image: {
+            "doc_type": "W-9",
+            "fields": {"should_not_be_scored": "WRONG-VALUE"},
+        }
+    )
+    monkeypatch.setitem(sys.modules, "pipeline", fake_pipeline)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_eval.py",
+            "--labels",
+            str(labels),
+            "--docs",
+            str(docs),
+            "--out",
+            str(output),
+        ],
+    )
+    assert scoring.main() == 0
+    summary = json.loads(output.read_text(encoding="utf-8"))["summary"]
+    assert summary["doc_type_correct"] == 1
+    assert summary["classify_only_docs"] == 1
+    assert summary["field_total"] == 0  # fields skipped entirely
+    assert summary["silent_wrong_values"] == 0
+

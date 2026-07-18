@@ -24,9 +24,22 @@
     partnership_ein: "Partnership EIN", ordinary_income: "Ordinary income",
     borrower_name: "Borrower"
   };
-  var DOC_TYPES = ["W-2", "1099-NEC", "1099-INT", "1099-MISC", "K-1", "1098"];
+  // Classify-only doc types (T65): classified + assigned + confirmed, but no
+  // fields are extracted (extract: false). Kept in sync with backend
+  // pipeline.CLASSIFY_ONLY_TYPES. They still satisfy a checklist item once
+  // confirmed (matching is by doc_type string).
+  var CLASSIFY_ONLY_TYPES = [
+    "1099-DIV", "1099-B", "1099-R", "1099-G",
+    "1098-T", "1098-E", "1095-A",
+    "property tax statement", "charitable receipt", "brokerage statement",
+    "W-9", "engagement letter"
+  ];
+  var CLASSIFY_ONLY = {};
+  CLASSIFY_ONLY_TYPES.forEach(function (t) { CLASSIFY_ONLY[t] = 1; });
+  var DOC_TYPES = ["W-2", "1099-NEC", "1099-INT", "1099-MISC", "K-1", "1098"].concat(CLASSIFY_ONLY_TYPES);
   var TIN_FIELDS = { ssn: 1, recipient_tin: 1, borrower_tin: 1, partnership_ein: 1 };
   function labelFor(k) { return FIELD_LABELS[k] || k; }
+  function isClassifyOnly(t) { return !!CLASSIFY_ONLY[t]; }
   function isMoney(k) { return /^box|wages|interest|withheld|comp|income|mortgage/.test(k); }
   // Mask any SSN/TIN/EIN — the privacy story. Covers ssn, *_tin, *_ein.
   function isTin(k) { return !!TIN_FIELDS[k] || k === "ssn" || /(?:tin|ein)$/.test(k); }
@@ -263,6 +276,7 @@
       var confirmed = doc.status === "confirmed";
       var errored = doc.status === "error";
       var unrec = doc.status === "unrecognized";
+      var classifyOnly = isClassifyOnly(doc.doc_type);
       var right = "";
 
       var heading = errored ? "Model unavailable" : unrec ? "Unrecognized document" : doc.doc_type;
@@ -271,7 +285,11 @@
         ? 'Confirmed · in ' + esc(clientName(doc.client_id) || "—") + '\'s file'
         : errored
           ? 'This document could not be read.'
-          : 'Model read this ' + (unrec ? 'file' : doc.doc_type + '. Check it against the image, correct anything wrong, then confirm.')) + '</div>';
+          : unrec
+            ? 'Model read this file'
+            : classifyOnly
+              ? 'Classified as ' + esc(doc.doc_type) + '. No fields are extracted for this type — assign a client and confirm to file it.'
+              : 'Model read this ' + doc.doc_type + '. Check it against the image, correct anything wrong, then confirm.') + '</div>';
 
       if (errored && !confirmed) {
         right += '<div class="error-banner">Couldn’t reach the model — is the model server running? Retry.</div>';
@@ -318,6 +336,8 @@
           right += '</div></div>';
         });
         right += '</div>';
+      } else if (classifyOnly && !confirmed) {
+        right += '<div class="rl-empty">Classify-only document — no fields to review. Assign a client and confirm to check it off their list.</div>';
       } else if (!unrec && !errored) {
         right += '<div class="rl-empty">No fields extracted.</div>';
       }

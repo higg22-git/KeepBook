@@ -247,5 +247,20 @@
    "lender": "Wasatch Home Lending",
    "box1_mortgage_interest": "11932.60"
   }
+ },
+ "charitable_receipt_01.png": {
+  "doc_type": "charitable receipt",
+  "classify_only": true,
+  "fields": {}
+ },
+ "w9_01.png": {
+  "doc_type": "W-9",
+  "classify_only": true,
+  "fields": {}
+ },
+ "brokerage_stmt_01.png": {
+  "doc_type": "brokerage statement",
+  "classify_only": true,
+  "fields": {}
  }
 }

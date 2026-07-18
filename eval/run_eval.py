@@ -111,6 +111,10 @@ def main() -> int:
     field_correct = 0
     field_total = 0
     silent_wrong = 0
+    # Classify-only docs (T65, extract: false): scored on doc_type ONLY, field
+    # scoring is skipped entirely. With zero extracted fields they cannot produce
+    # a silent-wrong, so they never enter the field/silent-wrong aggregates.
+    classify_only_docs = 0
     # flag_coverage bookkeeping: of the fields the model got wrong, how many
     # carried low_confidence=True (were surfaced for human review).
     silent_wrong_flagged = 0            # verdict == "wrong" AND low_confidence
@@ -156,8 +160,15 @@ def main() -> int:
             hand_latencies.append(dt)
         if hand_ens:
             ensemble_ran = True
+        classify_only = bool(exp.get("classify_only"))
+        if classify_only:
+            classify_only_docs += 1
         field_results = {}
-        for key, exp_val in (exp.get("fields") or {}).items():
+        # Classify-only docs carry no fields to score (extract: false). Skip the
+        # field loop even if a label mistakenly lists fields — a document with no
+        # extracted values must never register a silent-wrong.
+        scored_fields = {} if classify_only else (exp.get("fields") or {})
+        for key, exp_val in scored_fields.items():
             field_total += 1
             verdict = score_field(exp_val, pred_fields.get(key))
             flagged = bool(low_conf.get(key, False))
@@ -194,6 +205,7 @@ def main() -> int:
             "file": name,
             "latency_s": round(dt, 2),
             "handwritten": bool(result.get("handwritten", False)),
+            "classify_only": classify_only,
             "hand_ensemble": hand_ens,
             "doc_type": {
                 "expected": exp_type,
@@ -233,6 +245,7 @@ def main() -> int:
         "field_correct": field_correct,
         "field_total": field_total,
         "field_accuracy": round(field_pct / 100, 4),
+        "classify_only_docs": classify_only_docs,
         "silent_wrong_values": silent_wrong,
         "flag_coverage": round(flag_cov, 4) if flag_cov is not None else None,
         "flag_coverage_silent_wrong": f"{silent_wrong_flagged}/{silent_wrong}",

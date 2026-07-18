@@ -36,7 +36,13 @@ The eval runner (docs/EVAL.md) imports this same adapter and honors the same env
   "id": "doc_001",
   "client_id": "client_smith",        // null until assigned/binned
   "status": "pending" | "extracted" | "confirmed" | "unrecognized",
-  "doc_type": "W-2" | "1099-NEC" | "1099-INT" | "1099-MISC" | "K-1" | "1098" | "UNRECOGNIZED",
+  // Extract types (fields extracted) + classify-only types (extract: false, T65)
+  // + UNRECOGNIZED. Classify-only types land status "extracted" with fields:{}
+  // — no extraction call runs — and are checked off once human-confirmed.
+  "doc_type": "W-2" | "1099-NEC" | "1099-INT" | "1099-MISC" | "K-1" | "1098"
+            | "1099-DIV" | "1099-B" | "1099-R" | "1099-G" | "1098-T" | "1098-E"
+            | "1095-A" | "property tax statement" | "charitable receipt"
+            | "brokerage statement" | "W-9" | "engagement letter" | "UNRECOGNIZED",
   "image_path": "uploads/doc_001.png",
   "received_at": "2026-07-18T09:14:02Z",   // OPTIONAL — set at intake; frontend shows "Received Jul 18" if present
   "fields": {                          // extracted; keys vary by doc_type
@@ -112,4 +118,4 @@ Single JSON file (`state.json`) written after every mutation. No DB. Restart-saf
 
 ## Processing loop
 
-Sequential queue, one doc at a time (e4b ~20s/doc on M4). Two model calls per doc are allowed if it helps: (1) classify doc_type, (2) type-specific field extraction prompt. Strict-JSON prompts, `temperature: 0`. On unparseable JSON: one retry, then mark `unrecognized`.
+Sequential queue, one doc at a time (e4b ~20s/doc on M4). Two model calls per doc are allowed if it helps: (1) classify doc_type, (2) type-specific field extraction prompt. Strict-JSON prompts, `temperature: 0`. On unparseable JSON: one retry, then mark `unrecognized`. **Classify-only types (T65, `extract: false`) skip step (2) entirely — one model call, landing `extracted` with `fields:{}` for human confirm.**
