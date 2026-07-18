@@ -117,10 +117,10 @@ Owners: **V** = Vin, **agent** = any coding agent (with the owner reviewing).
   Verify: run the full flow once **with Wi-Fi off** — this is also the demo's on-device proof.
   Evidence: _none_
 
-- [ ] **T41 — Courier OS verification (env flip)** (V)
+- [x] **T41 — Courier OS verification (env flip)** (V)
   DoD: install + auth; kill test via `MODEL_RUNTIME=courier`; result recorded in PRD §8 EITHER WAY. Only a pass permits naming Courier in writeup/demo.
   Verify: `run_test.py` equivalent through the courier adapter path returns 6/6 on the W-2, or the failure is documented.
-  Evidence: _none_
+  Evidence (orchestrator, Sat ~9:10 AM, Vin authorized start): **FAIL — documented in PRD §8, Courier not named anywhere public.** `scripts/courier_bakeoff.sh` preflight PASS (`ollama ps` empty, `/v1/models` lists `gemma4:e4b` + `gemma4:e2b`, no id overrides needed); e2b image sanity FAIL — 3× 60s adapter timeouts, then a direct call with `timeout=240` → `[240.0s] FAILED: TimeoutError` (system 70% memory free at request time — resources were not the constraint this run; image inference simply never returned). Kill test + subset not reached (gated on sanity). WRITEUP runtime line finalized to Ollama-only; DEMO-SCRIPT 0:35 line finalized. Install/auth half was completed Fri overnight (self-hosted Personal edition, local key in backend/.env).
 
 - [x] **T42 — Demo seed data** (agent)
   DoD: `state.json` with 3 clients matching docs/USER-JOURNEY.md — Ruth Okafor (complete after one confirm), Marcus Whitfield (missing 1099-INT), Chen partnership (missing K-1 + 1098).

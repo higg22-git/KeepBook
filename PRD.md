@@ -121,13 +121,12 @@ The track disqualifies any project whose inference runs in the cloud, so the run
 **Runtime A — Ollama (VERIFIED, the default).**
 `MODEL_RUNTIME=ollama`. `gemma4:e2b`, `gemma4:e4b`, and `gemma4:12b` are pulled and confirmed working on the demo machine via a real extraction test (§9), hitting `{OLLAMA_HOST}/api/generate`. This path works today. Development also happens from a secondary dev machine against this runtime (pointing `OLLAMA_HOST` at the model host over Tailscale).
 
-**Runtime B — Courier OS (getcourier.ai) (supported in code, UNVERIFIED in practice).**
-`MODEL_RUNTIME=courier`. An MLX-native, Mac-only local model runtime with an OpenAI-compatible HTTP API — likely built by one of the judges, a real affinity signal. Because the adapter already speaks the OpenAI chat-completions shape, trying Courier is a config change on Vin's Mac, not a code change. Still not verified:
-- Whether it serves the exact `gemma4:e4b` variant. (ASSUMED unknown.)
-- Whether its API accepts image input at all — the load-bearing unknown, since the whole product is image extraction. (ASSUMED unknown.)
-- Account install/auth has not happened yet.
+**Runtime B — Courier OS (getcourier.ai) — BAKE-OFF RUN, FAILED. Not named anywhere public.**
+`MODEL_RUNTIME=courier`. An MLX-native, Mac-only local model runtime with an OpenAI-compatible HTTP API. The adapter speaks its chat-completions shape, so trying it was a config flip. What verification found (two sessions):
+- Fri overnight (VERIFIED): Personal edition runs fully self-hosted — no account, no login; the instance mints its own local API key. Its 8-bit `e4b` build (~14GB) hits a memory wall on this 24GB machine that Ollama's 4-bit (9.6GB) doesn't. The API *accepts* the OpenAI `image_url` payload shape — generation began; the stall was resources, not format.
+- **Sat 9 AM bake-off (VERIFIED — the verdict):** `scripts/courier_bakeoff.sh` on an uncontended machine (Ollama models stopped, `ollama ps` empty, system reporting 70% memory free at request time). `/v1/models` answers and lists both `gemma4:e4b` and `gemma4:e2b` under matching ids. But the **e2b image sanity call — the smaller model — never completed: 3× 60s adapter timeouts, then a single direct call with a 240s timeout also timed out.** No response was ever received from image inference. The e4b kill test and 5-doc subset were therefore not reached (gated on sanity).
 
-**Decision rule (explicit):** the adapter ships both runtimes; the honesty gate is unchanged. The demo and Writeup claim whichever runtime **passed the §9 kill test on the demo Mac**. Courier OS must pass that test with equal or better results before it is named anywhere. If both pass, demo on the better score/latency; Ollama remains the guaranteed fallback. As of this writing the verified runtime is **Ollama**.
+**Decision (final, per the pre-declared rule):** only a §9 kill-test pass permits naming Courier in the writeup or demo. It did not get past sanity. **Ollama is the sole named runtime everywhere public.** The dual-runtime adapter still ships — it is the honest architecture claim ("any OpenAI-compatible local server"), and the negative result is recorded here rather than erased.
 
 Note on the phone: a teammate's iPhone 14 (during Friday testing) loads `gemma4:e2b` in Google AI Edge Gallery but not `e4b`. That is why the phone never runs inference in this architecture — it is a capture peripheral only. All inference is on the Mac. (VERIFIED.)
 

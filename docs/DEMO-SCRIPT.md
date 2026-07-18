@@ -28,7 +28,7 @@ Hybrid structure per docs/USER-JOURNEY.md: 30s story cold-open → feature tour 
 
 **0:35 — Capture screen** [point at the on-device banner, then the queue filling]
 
-> "Gemma 4 — the e4b model, running locally through [Ollama / Courier OS — whichever passed T41] — is classifying each document, extracting the fields, and sorting them into per-client bins. About twenty seconds a document, so they'll keep landing while we talk."
+> "Gemma 4 — the e4b model, running locally through Ollama — is classifying each document, extracting the fields, and sorting them into per-client bins. About twenty seconds a document, so they'll keep landing while we talk."
 
 **1:00 — Bin Review screen** [open a processed doc: image left, fields right]
 
