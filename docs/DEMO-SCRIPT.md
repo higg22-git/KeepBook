@@ -14,6 +14,7 @@ Hybrid structure per docs/USER-JOURNEY.md: 30s story cold-open → feature tour 
   - `receipt_01.png` — the UNRECOGNIZED plant
 - [ ] Seed state loaded via `./scripts/demo_state.sh big` — the 8-client seed (reads as real software); it preserves the canonical trio and their exact script states: Ruth Okafor (one confirm from complete), Marcus Whitfield (missing 1099-INT), Chen partnership (missing K-1 + 1098). Fallback restore (`fallback`) unchanged.
 - [ ] Fallback restore command sitting in a ready terminal (T43)
+- [ ] **Doc→client mapping (pinned ~2:40, rehearse it):** `1099int_clean_01`→Marcus (his missing chip inks — the 1:00 clean-confirm beat); `w2_photo_01`→Marcus (red-pen beat, files as 2nd W-2); `1098_clean_01`→Chen (chip inks; careful-mode doc); `1099int_photo_01`→show flag only, don't confirm; `receipt_01`→Unrecognized beat; `w2_clean_02`→leave queued (backup — never give Ruth a W-2 before the finale); seeded doc_003→Ruth = the 1:45 finale (all-in ✓ + dot). Form names ≠ client names is synthetic data + the T61 identity-gate story if asked.
 ## Script
 
 **0:00 — Cold open** [checklist dashboard on screen, but don't explain it yet]
