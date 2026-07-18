@@ -74,8 +74,39 @@ Rule: a checklist item is satisfied only by a **confirmed** document. Unrecogniz
 | POST | `/documents/{id}/confirm` | `{"client_id": "...", "doc_type": "...", "fields": {"box2_fed_withheld": "9,183.44", ...}}` | updated `Document` | Any field differing from extraction gets `corrected: true` + `original_value`. Sets status `confirmed`, updates client checklist. |
 | GET | `/clients` | — | `[Client, ...]` | Dashboard source. |
 | POST | `/clients` | `{"name": "...", "expected_docs": [...]}` | `Client` | Seed demo clients. |
+| GET | `/clients/{id}/export.csv` | — | `text/csv` (attachment) | Flat CSV of the client's **confirmed** docs, one row per field. `404` unknown client; header-only CSV when the client has no confirmed docs. See "CSV export" below. |
 | GET | `/stats` | — | `{"fields_extracted": n, "fields_corrected": n, "correction_rate": 0.04}` | The live-accuracy metric from PRD §9. Cheap to compute, big in demo. |
 | GET | `/stats/timeline?hours=24` | — | see "Event log" below | **Stretch** — powers the Stats for Nerds screen. Build only after core endpoints are green. |
+
+## CSV export
+
+`GET /clients/{id}/export.csv` streams the client's **confirmed** documents as a
+flat CSV — the hand-off surface. Response is `text/csv` with
+`Content-Disposition: attachment; filename="{client_id}.csv"`. Escaping is stdlib
+`csv` (values with commas/quotes/newlines are quoted). `404` for an unknown
+client; a client with zero confirmed docs returns a valid header-only CSV.
+
+**Grain: one row per field** (not per document). A W-2 with five fields is five
+rows. Only `status == "confirmed"` documents are included — extraction alone
+never exports. A corrected field exports its **corrected** value, with the value
+it replaced in its own `original_value` column, so correction provenance
+survives the hand-off.
+
+Columns (in order):
+
+| column | meaning |
+|---|---|
+| `client_id` | the client's id |
+| `client_name` | the client's display name |
+| `doc_id` | source document id |
+| `doc_type` | `W-2`, `1099-INT`, … |
+| `received_at` | doc intake timestamp (may be empty) |
+| `field_key` | schema key, e.g. `box2_fed_withheld` |
+| `field_label` | human label (mirrors the UI's `FIELD_LABELS`; falls back to `field_key`) |
+| `value` | the confirmed value (the corrected value when corrected) |
+| `corrected` | `true` / `false` |
+| `original_value` | the pre-correction value when `corrected`, else empty |
+| `low_confidence` | `true` / `false` |
 
 ## Event log (stretch tier — Stats for Nerds)
 

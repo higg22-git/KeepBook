@@ -41,6 +41,7 @@
       getStats: function () { return j("/stats"); },
       getQueue: function () { return j("/queue"); },
       imageUrl: function (doc) { return base + "/documents/" + doc.id + "/image"; },
+      exportCsvUrl: function (clientId) { return base + "/clients/" + clientId + "/export.csv"; },
       intake: function (files) {
         var fd = new FormData();
         for (var i = 0; i < files.length; i++) fd.append("file", files[i]);
@@ -169,6 +170,9 @@
         });
       },
       imageUrl: function (doc) { return doc && doc.image_path ? doc.image_path : ""; },
+      // Mock mode has no backend to stream CSV; point at the same-origin
+      // endpoint so the link works whenever a backend is actually serving.
+      exportCsvUrl: function (clientId) { return "/clients/" + clientId + "/export.csv"; },
 
       getTrace: function (id) {
         return ready().then(function () {

@@ -496,7 +496,10 @@
       '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">' +
       '<div class="client-name">' + esc(c.name) + '</div>' + badge + '</div>' +
       '<div class="client-meta">2025 tax intake · <span class="count tnum">' + haveCount + ' of ' + total + ' received</span></div>' +
-      rows + '</div></div>';
+      rows +
+      '<div class="client-foot"><a class="export-csv-link" href="' + esc(api.exportCsvUrl(c.id)) +
+      '" download="' + esc(c.id) + '.csv" title="Confirmed documents as CSV — imports anywhere">Export CSV ↓</a></div>' +
+      '</div></div>';
   }
 
   function renderStats(s) {

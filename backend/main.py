@@ -9,6 +9,8 @@ Run:  uvicorn main:app --port 8100      (from backend/, venv active)
 
 import base64
 import copy
+import csv
+import io
 import json
 import math
 import os
@@ -20,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
@@ -610,6 +612,83 @@ async def create_client(request: Request):
         STATE["seq_client"] += 1
         _persist_locked()
         return client
+
+
+# Human-readable field labels for the CSV export's field_label column. Mirrors
+# frontend/js/app.js FIELD_LABELS so an exported sheet reads the same as the UI.
+# Unknown keys fall back to the raw snake_case key (see _field_label).
+_CSV_FIELD_LABELS = {
+    "employer": "Employer", "ein": "EIN", "employee_name": "Employee", "ssn": "SSN",
+    "box1_wages": "Wages (Box 1)", "box2_fed_withheld": "Fed. tax withheld (Box 2)",
+    "payer": "Payer", "recipient": "Recipient", "recipient_tin": "Recipient TIN",
+    "box1_interest": "Interest income (Box 1)", "box4_fed_withheld": "Fed. tax withheld (Box 4)",
+    "box1_nonemployee_comp": "Nonemployee comp. (Box 1)",
+    "lender": "Lender", "borrower": "Borrower", "borrower_tin": "Borrower TIN",
+    "box1_mortgage_interest": "Mortgage interest (Box 1)",
+    "recipient_name": "Recipient", "box1_interest_income": "Interest income (Box 1)",
+    "box3_other_income": "Other income (Box 3)",
+    "partnership_name": "Partnership", "partner_name": "Partner",
+    "partnership_ein": "Partnership EIN", "ordinary_income": "Ordinary income",
+    "borrower_name": "Borrower",
+}
+
+_CSV_COLUMNS = [
+    "client_id", "client_name", "doc_id", "doc_type", "received_at",
+    "field_key", "field_label", "value", "corrected", "original_value",
+    "low_confidence",
+]
+
+
+def _field_label(key: str) -> str:
+    return _CSV_FIELD_LABELS.get(key, key)
+
+
+@app.get("/clients/{client_id}/export.csv")
+async def export_client_csv(client_id: str):
+    """Flat CSV of one client's CONFIRMED documents — one row per field.
+
+    Integration surface: anything that imports CSV (spreadsheets, ledgers, tax
+    prep) can read this today. Only confirmed docs are exported; a corrected
+    field ships its corrected value plus the original_value it replaced, so the
+    correction provenance survives the hand-off. See docs/API.md "CSV export".
+    """
+    with STATE_LOCK:
+        client = STATE["clients"].get(client_id)
+        if client is None:
+            raise HTTPException(404, f"no client {client_id}")
+        client_name = client.get("name", "")
+        rows = []
+        for doc in STATE["documents"].values():
+            if doc.get("client_id") != client_id or doc.get("status") != "confirmed":
+                continue
+            doc_id = doc.get("id", "")
+            doc_type = doc.get("doc_type", "")
+            received_at = doc.get("received_at", "")
+            for key, field in (doc.get("fields") or {}).items():
+                corrected = bool(field.get("corrected"))
+                rows.append([
+                    client_id,
+                    client_name,
+                    doc_id,
+                    doc_type,
+                    received_at,
+                    key,
+                    _field_label(key),
+                    field.get("value", ""),
+                    "true" if corrected else "false",
+                    field.get("original_value", "") if corrected else "",
+                    "true" if field.get("low_confidence") else "false",
+                ])
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(_CSV_COLUMNS)
+    writer.writerows(rows)
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{client_id}.csv"'},
+    )
 
 
 # ----------------------------- Stats ---------------------------------------
