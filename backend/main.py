@@ -926,10 +926,18 @@ def _nudge_draft_ok(draft: str, client_name: str, missing: list) -> bool:
 
 
 @app.get("/clients/{client_id}/nudge")
-async def get_client_nudge(client_id: str):
+def get_client_nudge(client_id: str):
     """Draft a "still waiting on" reminder for one client's missing checklist
     items. Complete client -> draft: null. Never 500s on a model failure or a
     misbehaving model output — falls back to the deterministic template.
+
+    Deliberately a plain `def`, not `async def`: the model call below is a
+    blocking synchronous urllib request (~5-25s on this host). Every other
+    model call in this backend happens on the dedicated worker thread,
+    off FastAPI's event loop. A plain `def` endpoint is run by
+    Starlette/FastAPI in its threadpool (`run_in_threadpool`), so this one
+    blocking call can't freeze the whole server (e.g. /queue polling) for its
+    duration the way it would inside an `async def` route.
     """
     with STATE_LOCK:
         client = STATE["clients"].get(client_id)
